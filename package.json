@@ -1,0 +1,9 @@
+{
+  "name": "bidding-scraper-app",
+  "version": "1.0.0",
+  "description": "入札広告スクレイピングアプリ",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
+    "node-fetch": "^2.6.7"
+  }
+}
