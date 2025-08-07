@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>入札広告スクレイピングアプリ</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            border-left: 4px solid #2196F3;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            min-width: 200px;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #2196F3;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #f44336, #ff6b6b);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(244, 67, 54, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #4CAF50, #66BB6A);
+            color: white;
+            font-size: 16px;
+            padding: 15px 30px;
+            margin: 20px 0;
+            width: 100%;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .list-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        }
+
+        .list-item .site-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        .list-item .site-url {
+            word-break: break-all;
+        }
+
+        .list-item .site-name {
+            color: #666;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        .keyword-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .keyword-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            border: 1px solid #bbdefb;
+        }
+
+        .keyword-tag button {
+            background: none;
+            border: none;
+            color: #1976d2;
+            cursor: pointer;
+            font-size: 16px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .keyword-tag button:hover {
+            background: #1976d2;
+            color: white;
+        }
+
+        .results {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .results h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .result-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+            background: #f1f8e9;
+            transition: all 0.3s ease;
+        }
+
+        .result-item:hover {
+            background: #e8f5e8;
+            transform: translateY(-2px);
+        }
+
+        .result-url {
+            color: #2196F3;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .result-url:hover {
+            text-decoration: underline;
+        }
+
+        .result-keywords {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .no-results {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 30px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #2196F3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 600;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 768px) {
+            .input-group {
+                flex-direction: column;
+            }
+            
+            .input-group input {
+                min-width: 100%;
+            }
+            
+            .list-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>入札広告スクレイピングアプリ</h1>
+            <p>公告・入札情報を効率的に監視・収集</p>
+        </div>
+
+        <div class="main-content">
+            <!-- サイト管理セクション -->
+            <div class="section">
+                <h2>監視サイト管理</h2>
+                <div class="input-group">
+                    <input type="url" id="siteInput" placeholder="監視するサイトのURLを入力 (例: https://example.com)" />
+                    <input type="text" id="siteNameInput" placeholder="サイト名を入力 (空白の場合は自動設定)" />
+                    <button class="btn btn-primary" onclick="addSite()">サイト追加</button>
+                </div>
+                <div id="siteList">
+                    <div class="list-item">
+                        <div class="site-info">
+                            <span class="site-url">https://daisen.or.jp/category/news/</span>
+                            <span class="site-name">大仙市ニュース</span>
+                        </div>
+                        <button class="btn btn-danger" onclick="removeSite(this)">削除</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- キーワード管理セクション -->
+            <div class="section">
+                <h2>監視キーワード管理</h2>
+                <div class="input-group">
+                    <input type="text" id="keywordInput" placeholder="監視キーワードを入力" />
+                    <button class="btn btn-primary" onclick="addKeyword()">キーワード追加</button>
+                </div>
+                <div class="keyword-container" id="keywordList">
+                    <div class="keyword-tag">
+                        入札広告
+                        <button onclick="removeKeyword(this)">×</button>
+                    </div>
+                    <div class="keyword-tag">
+                        指名競争
+                        <button onclick="removeKeyword(this)">×</button>
+                    </div>
+                    <div class="keyword-tag">
+                        公告
+                        <button onclick="removeKeyword(this)">×</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- スクレイピング実行セクション -->
+            <div class="section">
+                <h2>スクレイピング実行</h2>
+                <button class="btn btn-success" onclick="startScraping()">
+                    ワンクリックスクレイピング開始
+                </button>
+                <div id="statusMessage"></div>
+            </div>
+
+            <!-- 結果表示セクション -->
+            <div class="results">
+                <h3>スクレイピング結果</h3>
+                <div id="results">
+                    <div class="no-results">スクレイピングを実行してください</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // グローバル変数
+        let sites = [
+            { url: 'https://daisen.or.jp/category/news/', name: '大仙市ニュース' }
+        ];
+        let keywords = ['入札広告', '指名競争', '公告'];
+
+        // サイト名を取得する関数（簡易版）
+        function getSiteName(url) {
+            try {
+                const domain = new URL(url).hostname;
+                // ドメインからサイト名を推測（簡易版）
+                const siteNames = {
+                    'daisen.or.jp': '大仙市ニュース',
+                    'city.osaka.lg.jp': '大阪市',
+                    'city.yokohama.lg.jp': '横浜市',
+                    'pref.tokyo.lg.jp': '東京都'
+                };
+                return siteNames[domain] || domain;
+            } catch (e) {
+                return 'サイト名不明';
+            }
+        }
+
+        // サイト追加機能
+        function addSite() {
+            const urlInput = document.getElementById('siteInput');
+            const nameInput = document.getElementById('siteNameInput');
+            const url = urlInput.value.trim();
+            const customName = nameInput.value.trim();
+            
+            if (!url) {
+                showStatus('URLを入力してください', 'error');
+                return;
+            }
+
+            try {
+                new URL(url); // URL形式チェック
+            } catch (e) {
+                showStatus('有効なURLを入力してください', 'error');
+                return;
+            }
+
+            if (sites.some(site => site.url === url)) {
+                showStatus('このサイトは既に追加されています', 'error');
+                return;
+            }
+
+            // カスタム名が入力されていればそれを使用、なければ自動生成
+            const siteName = customName || getSiteName(url);
+            const newSite = { url, name: siteName };
+            sites.push(newSite);
+            addSiteToList(newSite);
+            urlInput.value = '';
+            nameInput.value = '';
+            showStatus('サイトを追加しました', 'success');
+        }
+
+        function addSiteToList(site) {
+            const siteList = document.getElementById('siteList');
+            const div = document.createElement('div');
+            div.className = 'list-item';
+            div.innerHTML = `
+                <div class="site-info">
+                    <span class="site-url">${site.url}</span>
+                    <span class="site-name">${site.name}</span>
+                </div>
+                <button class="btn btn-danger" onclick="removeSite(this)">削除</button>
+            `;
+            siteList.appendChild(div);
+        }
+
+        function removeSite(button) {
+            const listItem = button.parentElement;
+            const url = listItem.querySelector('.site-url').textContent;
+            sites = sites.filter(site => site.url !== url);
+            listItem.remove();
+            showStatus('サイトを削除しました', 'success');
+        }
+
+        // キーワード追加機能
+        function addKeyword() {
+            const input = document.getElementById('keywordInput');
+            const keyword = input.value.trim();
+            
+            if (!keyword) {
+                showStatus('キーワードを入力してください', 'error');
+                return;
+            }
+
+            if (keywords.includes(keyword)) {
+                showStatus('このキーワードは既に追加されています', 'error');
+                return;
+            }
+
+            keywords.push(keyword);
+            addKeywordToList(keyword);
+            input.value = '';
+            showStatus('キーワードを追加しました', 'success');
+        }
+
+        function addKeywordToList(keyword) {
+            const keywordList = document.getElementById('keywordList');
+            const div = document.createElement('div');
+            div.className = 'keyword-tag';
+            div.innerHTML = `
+                ${keyword}
+                <button onclick="removeKeyword(this)">×</button>
+            `;
+            keywordList.appendChild(div);
+        }
+
+        function removeKeyword(button) {
+            const keywordTag = button.parentElement;
+            const keyword = keywordTag.textContent.replace('×', '').trim();
+            keywords = keywords.filter(kw => kw !== keyword);
+            keywordTag.remove();
+            showStatus('キーワードを削除しました', 'success');
+        }
+
+        // ステータス表示機能
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 3000);
+        }
+
+        // スクレイピング実行機能（シミュレーション）
+        async function startScraping() {
+            const resultsDiv = document.getElementById('results');
+            
+            // ローディング表示
+            resultsDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>スクレイピング中...</p>
+                </div>
+            `;
+
+            showStatus('スクレイピングを開始しました', 'success');
+
+            // シミュレーション用の遅延
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // シミュレーション結果を生成
+            const results = generateSimulationResults();
+            displayResults(results);
+        }
+
+        // シミュレーション結果生成
+        function generateSimulationResults() {
+            const currentDate = new Date();
+            const oneWeekAgo = new Date(currentDate - 7 * 24 * 60 * 60 * 1000);
+            
+            // ランダムで結果を生成
+            const hasResults = Math.random() > 0.3;
+            
+            if (!hasResults) {
+                return [];
+            }
+
+            const sampleResults = [
+                {
+                    url: 'https://daisen.or.jp/category/news/bidding-announcement-001',
+                    title: '令和6年度 公共工事入札広告について',
+                    keywords: ['入札広告', '公告'],
+                    date: new Date(currentDate - Math.random() * 7 * 24 * 60 * 60 * 1000)
+                },
+                {
+                    url: 'https://daisen.or.jp/category/news/competitive-bidding-002',
+                    title: '指名競争入札の実施について',
+                    keywords: ['指名競争'],
+                    date: new Date(currentDate - Math.random() * 7 * 24 * 60 * 60 * 1000)
+                },
+                {
+                    url: 'https://daisen.or.jp/category/news/public-notice-003',
+                    title: '建設工事に関する公告',
+                    keywords: ['公告', '入札広告'],
+                    date: new Date(currentDate - Math.random() * 7 * 24 * 60 * 60 * 1000)
+                }
+            ];
+
+            // ランダムで結果数を決定
+            const resultCount = Math.floor(Math.random() * sampleResults.length) + 1;
+            return sampleResults.slice(0, resultCount);
+        }
+
+        // 結果表示
+        function displayResults(results) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (results.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div class="no-results">
+                        <h4>該当案件なし</h4>
+                        <p>過去1週間以内に指定されたキーワードに該当する新しい記事は見つかりませんでした。</p>
+                    </div>
+                `;
+                showStatus('該当する案件が見つかりませんでした', 'error');
+                return;
+            }
+
+            let resultsHTML = `<h4>${results.length}件の該当案件が見つかりました</h4>`;
+            
+            results.forEach((result, index) => {
+                const formattedDate = result.date.toLocaleDateString('ja-JP');
+                const keywordList = result.keywords.join(', ');
+                
+                resultsHTML += `
+                    <div class="result-item">
+                        <div>
+                            <a href="#" class="result-url" onclick="openSimulatedPage('${result.url}')">${result.url}</a>
+                        </div>
+                        <div style="margin-top: 8px; font-weight: 600; color: #333;">${result.title}</div>
+                        <div class="result-keywords">
+                            ${formattedDate} | 該当キーワード: ${keywordList}
+                        </div>
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = resultsHTML;
+            showStatus(`${results.length}件の該当案件を発見しました`, 'success');
+        }
+
+        // シミュレーション用のページ開く機能
+        function openSimulatedPage(url) {
+            alert(`シミュレーション: ${url} のページを開きます。\n\n実際の運用では、このURLにアクセスして詳細な情報を確認できます。`);
+        }
+
+        // エンターキーでの追加機能
+        document.getElementById('siteInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addSite();
+            }
+        });
+
+        document.getElementById('siteNameInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addSite();
+            }
+        });
+
+        document.getElementById('keywordInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addKeyword();
+            }
+        });
+
+        // 初期化メッセージ
+        document.addEventListener('DOMContentLoaded', function() {
+            showStatus('アプリケーションが準備できました', 'success');
+        });
+    </script>
+</body>
+</html>
