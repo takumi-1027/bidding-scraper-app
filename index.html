@@ -63,6 +63,58 @@
             font-size: 1.5rem;
         }
 
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: #856404;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .warning-header {
+            padding: 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffeaa7;
+            transition: background-color 0.3s ease;
+        }
+
+        .warning-header:hover {
+            background: #ffd93d;
+        }
+
+        .warning-header h4 {
+            margin: 0;
+            color: #b45309;
+        }
+
+        .warning-toggle {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #b45309;
+            transition: transform 0.3s ease;
+        }
+
+        .warning-content {
+            padding: 0 15px;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .warning-content.active {
+            padding: 15px;
+            max-height: 500px;
+        }
+
+        .warning.active .warning-toggle {
+            transform: rotate(180deg);
+        }
+
         .input-group {
             display: flex;
             gap: 10px;
@@ -130,6 +182,12 @@
         .btn-success:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
         }
 
         .list-item {
@@ -236,6 +294,7 @@
             color: #2196F3;
             text-decoration: none;
             font-weight: 600;
+            word-break: break-all;
         }
 
         .result-url:hover {
@@ -296,6 +355,67 @@
             border: 1px solid #f5c6cb;
         }
 
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .method-selection {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .method-btn {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .method-btn.active {
+            border-color: #2196F3;
+            background: #e3f2fd;
+        }
+
+        .method-btn:hover {
+            border-color: #2196F3;
+        }
+
+        .method-description {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .config-section {
+            background: #e8f4fd;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .config-section h4 {
+            color: #0c5460;
+            margin-bottom: 15px;
+        }
+
+        .proxy-config {
+            display: none;
+        }
+
+        .proxy-config.active {
+            display: block;
+        }
+
         @media (max-width: 768px) {
             .input-group {
                 flex-direction: column;
@@ -310,6 +430,14 @@
                 align-items: flex-start;
                 gap: 10px;
             }
+
+            .method-selection {
+                flex-direction: column;
+            }
+
+            .method-btn {
+                min-width: 100%;
+            }
         }
     </style>
 </head>
@@ -317,10 +445,70 @@
     <div class="container">
         <div class="header">
             <h1>入札広告スクレイピングアプリ</h1>
-            <p>公告・入札情報を効率的に監視・収集</p>
+            <p>公告・入札情報の効率的な監視・収集システム</p>
         </div>
 
         <div class="main-content">
+            <!-- 重要な注意事項（折りたたみ式） -->
+            <div class="warning" id="warningSection">
+                <div class="warning-header" onclick="toggleWarning()">
+                    <h4>⚠️ 重要な注意事項</h4>
+                    <span class="warning-toggle">▼</span>
+                </div>
+                <div class="warning-content" id="warningContent">
+                    <ul>
+                        <li>ブラウザの CORS 制限により、直接的なスクレイピングは制限されています</li>
+                        <li>実際の運用には、プロキシサーバーまたはバックエンドAPIが必要です</li>
+                        <li>各サイトの利用規約を確認し、適切な間隔でアクセスしてください</li>
+                        <li>robots.txt ファイルの内容に従ってください</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- スクレイピング手法選択 -->
+            <div class="section">
+                <h2>スクレイピング手法選択</h2>
+                <div class="method-selection">
+                    <div class="method-btn active" onclick="selectMethod('proxy')" id="proxyMethod">
+                        <strong>プロキシサーバー経由</strong>
+                        <div class="method-description">CORS制限を回避（推奨）</div>
+                    </div>
+                    <div class="method-btn" onclick="selectMethod('api')" id="apiMethod">
+                        <strong>外部API利用</strong>
+                        <div class="method-description">専用スクレイピングAPI</div>
+                    </div>
+                    <div class="method-btn" onclick="selectMethod('extension')" id="extensionMethod">
+                        <strong>ブラウザ拡張機能</strong>
+                        <div class="method-description">Chrome拡張として実行</div>
+                    </div>
+                </div>
+
+                <!-- プロキシ設定 -->
+                <div class="config-section proxy-config active" id="proxyConfig">
+                    <h4>プロキシサーバー設定</h4>
+                    <div class="input-group">
+                        <input type="text" id="proxyUrl" placeholder="プロキシサーバーURL (例: http://your-proxy-server.com/api/scrape)" />
+                        <input type="text" id="apiKey" placeholder="APIキー（必要な場合）" />
+                    </div>
+                </div>
+
+                <!-- API設定 -->
+                <div class="config-section proxy-config" id="apiConfig">
+                    <h4>外部API設定</h4>
+                    <div class="input-group">
+                        <input type="text" id="externalApiUrl" placeholder="スクレイピングAPI URL" />
+                        <input type="text" id="externalApiKey" placeholder="APIキー" />
+                    </div>
+                </div>
+
+                <!-- 拡張機能設定 -->
+                <div class="config-section proxy-config" id="extensionConfig">
+                    <h4>ブラウザ拡張機能設定</h4>
+                    <p>Chrome拡張機能としてインストールして、content_scripts経由でアクセス</p>
+                    <button class="btn btn-primary" onclick="downloadExtension()">拡張機能をダウンロード</button>
+                </div>
+            </div>
+
             <!-- サイト管理セクション -->
             <div class="section">
                 <h2>監視サイト管理</h2>
@@ -366,8 +554,8 @@
             <!-- スクレイピング実行セクション -->
             <div class="section">
                 <h2>スクレイピング実行</h2>
-                <button class="btn btn-success" onclick="startScraping()">
-                    ワンクリックスクレイピング開始
+                <button class="btn btn-success" id="scrapeBtn" onclick="startScraping()">
+                    本格スクレイピング開始
                 </button>
                 <div id="statusMessage"></div>
             </div>
@@ -388,17 +576,45 @@
             { url: 'https://daisen.or.jp/category/news/', name: '大仙市ニュース' }
         ];
         let keywords = ['入札広告', '指名競争', '公告'];
+        let selectedMethod = 'proxy';
 
-        // サイト名を取得する関数（簡易版）
+        // 注意事項の表示/非表示切り替え
+        function toggleWarning() {
+            const warningSection = document.getElementById('warningSection');
+            const warningContent = document.getElementById('warningContent');
+            
+            warningSection.classList.toggle('active');
+            warningContent.classList.toggle('active');
+        }
+
+        // 手法選択
+        function selectMethod(method) {
+            selectedMethod = method;
+            
+            // ボタンのアクティブ状態を更新
+            document.querySelectorAll('.method-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(method + 'Method').classList.add('active');
+            
+            // 設定セクションの表示切替
+            document.querySelectorAll('.proxy-config').forEach(config => config.classList.remove('active'));
+            document.getElementById(method + 'Config').classList.add('active');
+        }
+
+        // サイト名を取得する関数
         function getSiteName(url) {
             try {
                 const domain = new URL(url).hostname;
-                // ドメインからサイト名を推測（簡易版）
                 const siteNames = {
                     'daisen.or.jp': '大仙市ニュース',
                     'city.osaka.lg.jp': '大阪市',
                     'city.yokohama.lg.jp': '横浜市',
-                    'pref.tokyo.lg.jp': '東京都'
+                    'pref.tokyo.lg.jp': '東京都',
+                    'city.sendai.jp': '仙台市',
+                    'city.sapporo.jp': '札幌市',
+                    'city.nagoya.jp': '名古屋市',
+                    'city.kyoto.lg.jp': '京都市',
+                    'city.kobe.lg.jp': '神戸市',
+                    'city.fukuoka.lg.jp': '福岡市'
                 };
                 return siteNames[domain] || domain;
             } catch (e) {
@@ -419,7 +635,7 @@
             }
 
             try {
-                new URL(url); // URL形式チェック
+                new URL(url);
             } catch (e) {
                 showStatus('有効なURLを入力してください', 'error');
                 return;
@@ -430,7 +646,6 @@
                 return;
             }
 
-            // カスタム名が入力されていればそれを使用、なければ自動生成
             const siteName = customName || getSiteName(url);
             const newSite = { url, name: siteName };
             sites.push(newSite);
@@ -508,67 +723,234 @@
             statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
             setTimeout(() => {
                 statusDiv.innerHTML = '';
-            }, 3000);
+            }, 5000);
         }
 
-        // スクレイピング実行機能（シミュレーション）
+        // 実際のスクレイピング実行
         async function startScraping() {
             const resultsDiv = document.getElementById('results');
+            const scrapeBtn = document.getElementById('scrapeBtn');
             
-            // ローディング表示
+            // バリデーション
+            if (sites.length === 0) {
+                showStatus('監視サイトを追加してください', 'error');
+                return;
+            }
+
+            if (keywords.length === 0) {
+                showStatus('監視キーワードを追加してください', 'error');
+                return;
+            }
+
+            // ローディング状態
+            scrapeBtn.disabled = true;
             resultsDiv.innerHTML = `
                 <div class="loading">
                     <div class="spinner"></div>
-                    <p>スクレイピング中...</p>
+                    <p>実際のスクレイピングを実行中...</p>
                 </div>
             `;
 
-            showStatus('スクレイピングを開始しました', 'success');
+            try {
+                let results = [];
 
-            // シミュレーション用の遅延
-            await new Promise(resolve => setTimeout(resolve, 2000));
+                switch (selectedMethod) {
+                    case 'proxy':
+                        results = await scrapeViaProxy();
+                        break;
+                    case 'api':
+                        results = await scrapeViaAPI();
+                        break;
+                    case 'extension':
+                        results = await scrapeViaExtension();
+                        break;
+                }
 
-            // シミュレーション結果を生成
-            const results = generateSimulationResults();
-            displayResults(results);
+                displayResults(results);
+                
+            } catch (error) {
+                console.error('スクレイピングエラー:', error);
+                showStatus(`スクレイピングでエラーが発生しました: ${error.message}`, 'error');
+                resultsDiv.innerHTML = `
+                    <div class="no-results">
+                        <h4>エラーが発生しました</h4>
+                        <p>${error.message}</p>
+                        <p>設定を確認してから再試行してください。</p>
+                    </div>
+                `;
+            } finally {
+                scrapeBtn.disabled = false;
+            }
         }
 
-        // シミュレーション結果生成
-        function generateSimulationResults() {
-            const currentDate = new Date();
-            const oneWeekAgo = new Date(currentDate - 7 * 24 * 60 * 60 * 1000);
-            
-            // ランダムで結果を生成
-            const hasResults = Math.random() > 0.3;
-            
-            if (!hasResults) {
-                return [];
+        // プロキシ経由でのスクレイピング
+        async function scrapeViaProxy() {
+            const proxyUrl = document.getElementById('proxyUrl').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+
+            if (!proxyUrl) {
+                throw new Error('プロキシサーバーURLを入力してください');
             }
 
-            const sampleResults = [
-                {
-                    url: 'https://daisen.or.jp/category/news/bidding-announcement-001',
-                    title: '令和6年度 公共工事入札広告について',
-                    keywords: ['入札広告', '公告'],
-                    date: new Date(currentDate - Math.random() * 7 * 24 * 60 * 60 * 1000)
-                },
-                {
-                    url: 'https://daisen.or.jp/category/news/competitive-bidding-002',
-                    title: '指名競争入札の実施について',
-                    keywords: ['指名競争'],
-                    date: new Date(currentDate - Math.random() * 7 * 24 * 60 * 60 * 1000)
-                },
-                {
-                    url: 'https://daisen.or.jp/category/news/public-notice-003',
-                    title: '建設工事に関する公告',
-                    keywords: ['公告', '入札広告'],
-                    date: new Date(currentDate - Math.random() * 7 * 24 * 60 * 60 * 1000)
-                }
-            ];
+            const results = [];
+            
+            for (const site of sites) {
+                showStatus(`${site.name} をスクレイピング中...`, 'warning');
+                
+                try {
+                    const response = await fetch(proxyUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(apiKey && { 'Authorization': `Bearer ${apiKey}` })
+                        },
+                        body: JSON.stringify({
+                            url: site.url,
+                            keywords: keywords,
+                            dateFrom: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7日前
+                            dateTo: new Date().toISOString().split('T')[0], // 本日
+                            onlyRecent: true // 新着のみ
+                        })
+                    });
 
-            // ランダムで結果数を決定
-            const resultCount = Math.floor(Math.random() * sampleResults.length) + 1;
-            return sampleResults.slice(0, resultCount);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    // レスポンスデータの処理
+                    if (data.results && Array.isArray(data.results)) {
+                        data.results.forEach(item => {
+                            const publishedDate = new Date(item.publishedDate);
+                            const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                            
+                            // 過去1週間以内の記事のみを追加
+                            if (publishedDate >= oneWeekAgo && publishedDate <= new Date()) {
+                                results.push({
+                                    url: item.url,
+                                    title: item.title,
+                                    keywords: item.matchedKeywords || [],
+                                    date: publishedDate,
+                                    siteName: site.name,
+                                    content: item.content || '',
+                                    isNew: true // 新着フラグ
+                                });
+                            }
+                        });
+                    }
+
+                    // レート制限対策
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                } catch (error) {
+                    console.error(`${site.name} のスクレイピングでエラー:`, error);
+                    showStatus(`${site.name} でエラー: ${error.message}`, 'error');
+                }
+            }
+
+            return results;
+        }
+
+        // 外部API経由でのスクレイピング
+        async function scrapeViaAPI() {
+            const apiUrl = document.getElementById('externalApiUrl').value.trim();
+            const apiKey = document.getElementById('externalApiKey').value.trim();
+
+            if (!apiUrl) {
+                throw new Error('外部API URLを入力してください');
+            }
+
+            if (!apiKey) {
+                throw new Error('APIキーを入力してください');
+            }
+
+            const results = [];
+            
+            for (const site of sites) {
+                showStatus(`${site.name} を外部API経由でスクレイピング中...`, 'warning');
+                
+                try {
+                    const response = await fetch(`${apiUrl}/scrape`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-API-Key': apiKey
+                        },
+                        body: JSON.stringify({
+                            target_url: site.url,
+                            search_keywords: keywords,
+                            date_from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                            date_to: new Date().toISOString().split('T')[0],
+                            only_new_articles: true
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`API Error ${response.status}: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    if (data.matches && Array.isArray(data.matches)) {
+                        data.matches.forEach(match => {
+                            const publishedDate = new Date(match.date_published);
+                            const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                            
+                            // 過去1週間以内の新着記事のみを追加
+                            if (publishedDate >= oneWeekAgo && publishedDate <= new Date()) {
+                                results.push({
+                                    url: match.page_url,
+                                    title: match.title,
+                                    keywords: match.found_keywords || [],
+                                    date: publishedDate,
+                                    siteName: site.name,
+                                    content: match.excerpt || '',
+                                    isNew: match.is_new_article || true
+                                });
+                            }
+                        });
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    
+                } catch (error) {
+                    console.error(`外部API経由での${site.name}スクレイピングでエラー:`, error);
+                    showStatus(`${site.name} API エラー: ${error.message}`, 'error');
+                }
+            }
+
+            return results;
+        }
+
+        // ブラウザ拡張機能経由でのスクレイピング
+        async function scrapeViaExtension() {
+            // Chrome拡張機能がインストールされているかチェック
+            if (!window.chrome || !window.chrome.runtime) {
+                throw new Error('Chrome拡張機能が見つかりません。拡張機能をインストールしてください。');
+            }
+
+            return new Promise((resolve, reject) => {
+                chrome.runtime.sendMessage('scraping-extension-id', {
+                    action: 'scrape',
+                    sites: sites,
+                    keywords: keywords,
+                    dateFrom: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    dateTo: new Date().toISOString().split('T')[0],
+                    onlyNewArticles: true
+                }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        reject(new Error(chrome.runtime.lastError.message));
+                        return;
+                    }
+
+                    if (response && response.success) {
+                        resolve(response.results || []);
+                    } else {
+                        reject(new Error(response?.error || '拡張機能との通信でエラーが発生しました'));
+                    }
+                });
+            });
         }
 
         // 結果表示
@@ -576,66 +958,525 @@
             const resultsDiv = document.getElementById('results');
             
             if (results.length === 0) {
+                const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                const dateRange = `${oneWeekAgo.toLocaleDateString('ja-JP')} ～ ${new Date().toLocaleDateString('ja-JP')}`;
+                
                 resultsDiv.innerHTML = `
                     <div class="no-results">
                         <h4>該当案件なし</h4>
-                        <p>過去1週間以内に指定されたキーワードに該当する新しい記事は見つかりませんでした。</p>
+                        <p><strong>検索期間:</strong> ${dateRange}（過去1週間の新着記事）</p>
+                        <p><strong>監視キーワード:</strong> ${keywords.join('、')}</p>
+                        <p><strong>監視サイト:</strong> ${sites.map(site => site.name).join('、')}</p>
+                        <p>指定された期間内に該当するキーワードを含む新しい記事は見つかりませんでした。</p>
                     </div>
                 `;
-                showStatus('該当する案件が見つかりませんでした', 'error');
+                showStatus('該当する案件が見つかりませんでした', 'warning');
                 return;
             }
 
-            let resultsHTML = `<h4>${results.length}件の該当案件が見つかりました</h4>`;
+            // 結果を日付順でソート（新しい順）
+            results.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            const dateRange = `${oneWeekAgo.toLocaleDateString('ja-JP')} ～ ${new Date().toLocaleDateString('ja-JP')}`;
+            
+            let resultsHTML = `
+                <h4>${results.length}件の該当案件が見つかりました</h4>
+                <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
+                    <strong>検索期間:</strong> ${dateRange}（過去1週間の新着記事）
+                </p>
+            `;
             
             results.forEach((result, index) => {
-                const formattedDate = result.date.toLocaleDateString('ja-JP');
+                const publishedDate = new Date(result.date);
+                const today = new Date();
+                const diffTime = Math.abs(today - publishedDate);
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                
+                let dateDisplay = publishedDate.toLocaleDateString('ja-JP', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    weekday: 'short'
+                });
+                
+                // 新着表示の判定
+                let newLabel = '';
+                if (diffDays === 0) {
+                    newLabel = '<span style="background: #ff4444; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.8rem; margin-left: 8px;">本日</span>';
+                } else if (diffDays === 1) {
+                    newLabel = '<span style="background: #ff8800; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.8rem; margin-left: 8px;">昨日</span>';
+                } else if (diffDays <= 3) {
+                    newLabel = '<span style="background: #4CAF50; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.8rem; margin-left: 8px;">新着</span>';
+                }
+                
                 const keywordList = result.keywords.join(', ');
                 
                 resultsHTML += `
                     <div class="result-item">
                         <div>
-                            <a href="#" class="result-url" onclick="openSimulatedPage('${result.url}')">${result.url}</a>
+                            <a href="${result.url}" class="result-url" target="_blank" rel="noopener noreferrer">${result.url}</a>
                         </div>
-                        <div style="margin-top: 8px; font-weight: 600; color: #333;">${result.title}</div>
+                        <div style="margin-top: 8px; font-weight: 600; color: #333; display: flex; align-items: center;">
+                            ${result.title}${newLabel}
+                        </div>
+                        ${result.content ? `<div style="margin-top: 5px; color: #555; font-size: 0.9rem;">${result.content.substring(0, 200)}${result.content.length > 200 ? '...' : ''}</div>` : ''}
                         <div class="result-keywords">
-                            ${formattedDate} | 該当キーワード: ${keywordList}
+                            ${dateDisplay} | サイト: ${result.siteName} | 該当キーワード: ${keywordList}
                         </div>
                     </div>
                 `;
             });
 
+            // CSVエクスポート機能
+            resultsHTML += `
+                <div style="margin-top: 20px; text-align: center;">
+                    <button class="btn btn-primary" onclick="exportToCSV(${JSON.stringify(results).replace(/"/g, '&quot;')})">
+                        CSVでエクスポート
+                    </button>
+                </div>
+            `;
+
             resultsDiv.innerHTML = resultsHTML;
             showStatus(`${results.length}件の該当案件を発見しました`, 'success');
         }
 
-        // シミュレーション用のページ開く機能
-        function openSimulatedPage(url) {
-            alert(`シミュレーション: ${url} のページを開きます。\n\n実際の運用では、このURLにアクセスして詳細な情報を確認できます。`);
+        // CSVエクスポート機能
+        function exportToCSV(results) {
+            const csvHeader = 'URL,タイトル,サイト名,発見日時,該当キーワード,内容\n';
+            const csvRows = results.map(result => {
+                const formattedDate = result.date.toLocaleDateString('ja-JP') + ' ' + result.date.toLocaleTimeString('ja-JP');
+                const keywords = result.keywords.join(';');
+                const content = (result.content || '').replace(/"/g, '""').replace(/\r?\n/g, ' ');
+                
+                return `"${result.url}","${result.title}","${result.siteName}","${formattedDate}","${keywords}","${content}"`;
+            }).join('\n');
+
+            const csvContent = csvHeader + csvRows;
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `入札広告_スクレイピング結果_${new Date().toISOString().split('T')[0]}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showStatus('CSVファイルをダウンロードしました', 'success');
+            } else {
+                showStatus('CSVエクスポートはこのブラウザではサポートされていません', 'error');
+            }
+        }
+
+        // 拡張機能ダウンロード機能
+        function downloadExtension() {
+            // Chrome拡張機能のマニフェストとコードを生成
+            const manifest = {
+                "manifest_version": 3,
+                "name": "入札広告スクレイピング拡張機能",
+                "version": "1.0",
+                "description": "公告・入札情報を効率的にスクレイピング",
+                "permissions": ["activeTab", "storage"],
+                "host_permissions": ["<all_urls>"],
+                "content_scripts": [
+                    {
+                        "matches": ["<all_urls>"],
+                        "js": ["content.js"]
+                    }
+                ],
+                "background": {
+                    "service_worker": "background.js"
+                },
+                "action": {
+                    "default_popup": "popup.html"
+                }
+            };
+
+            const contentScript = `
+                // コンテンツスクリプト
+                function scrapePageContent(keywords, dateFrom, dateTo) {
+                    const results = [];
+                    const today = new Date();
+                    const fromDate = new Date(dateFrom);
+                    const toDate = new Date(dateTo + 'T23:59:59'); // 当日の終わりまで
+                    
+                    // ページ内のリンクとコンテンツを検索
+                    const links = document.querySelectorAll('a[href]');
+                    const articles = document.querySelectorAll('article, .news-item, .post, .entry, [class*="news"], [class*="post"], [class*="article"]');
+                    
+                    // リンクからの検索
+                    links.forEach(link => {
+                        const text = link.textContent || '';
+                        const href = link.href;
+                        
+                        // キーワードマッチング
+                        const matchedKeywords = keywords.filter(keyword => 
+                            text.toLowerCase().includes(keyword.toLowerCase())
+                        );
+                        
+                        if (matchedKeywords.length > 0) {
+                            const extractedDate = extractDateFromContent(link, text);
+                            
+                            // 過去1週間以内の新着記事かチェック
+                            if (extractedDate && extractedDate >= fromDate && extractedDate <= toDate) {
+                                results.push({
+                                    url: href,
+                                    title: text.trim() || 'タイトルなし',
+                                    matchedKeywords: matchedKeywords,
+                                    publishedDate: extractedDate.toISOString(),
+                                    content: extractContentPreview(link),
+                                    source: 'link'
+                                });
+                            }
+                        }
+                    });
+                    
+                    // 記事要素からの検索
+                    articles.forEach(article => {
+                        const text = article.textContent || '';
+                        const titleElement = article.querySelector('h1, h2, h3, .title, [class*="title"]');
+                        const title = titleElement ? titleElement.textContent.trim() : text.substring(0, 100).trim();
+                        const linkElement = article.querySelector('a[href]');
+                        const href = linkElement ? linkElement.href : window.location.href;
+                        
+                        // キーワードマッチング
+                        const matchedKeywords = keywords.filter(keyword => 
+                            text.toLowerCase().includes(keyword.toLowerCase())
+                        );
+                        
+                        if (matchedKeywords.length > 0) {
+                            const extractedDate = extractDateFromContent(article, text);
+                            
+                            // 過去1週間以内の新着記事かチェック
+                            if (extractedDate && extractedDate >= fromDate && extractedDate <= toDate) {
+                                // 重複チェック
+                                const isDuplicate = results.some(result => result.url === href);
+                                if (!isDuplicate) {
+                                    results.push({
+                                        url: href,
+                                        title: title || 'タイトルなし',
+                                        matchedKeywords: matchedKeywords,
+                                        publishedDate: extractedDate.toISOString(),
+                                        content: text.substring(0, 300),
+                                        source: 'article'
+                                    });
+                                }
+                            }
+                        }
+                    });
+                    
+                    return results;
+                }
+                
+                // 日付抽出関数の改良版
+                function extractDateFromContent(element, text) {
+                    // 日付を含む可能性のある要素を探す
+                    const dateSelectors = [
+                        '.date', '.datetime', '.published', '.post-date', '.news-date',
+                        '[class*="date"]', '[class*="time"]', 'time', '.meta'
+                    ];
+                    
+                    let dateElement = null;
+                    for (const selector of dateSelectors) {
+                        dateElement = element.querySelector ? element.querySelector(selector) : 
+                                     element.closest ? element.closest('article, .news-item, .post')?.querySelector(selector) : null;
+                        if (dateElement) break;
+                    }
+                    
+                    // datetime属性があればそれを優先
+                    if (dateElement && dateElement.getAttribute('datetime')) {
+                        const dateStr = dateElement.getAttribute('datetime');
+                        const date = new Date(dateStr);
+                        if (!isNaN(date.getTime())) return date;
+                    }
+                    
+                    // data-date属性をチェック
+                    if (element.getAttribute && element.getAttribute('data-date')) {
+                        const dateStr = element.getAttribute('data-date');
+                        const date = new Date(dateStr);
+                        if (!isNaN(date.getTime())) return date;
+                    }
+                    
+                    // テキストから日付を抽出（より包括的なパターン）
+                    const datePatterns = [
+                        /\\d{4}[年\\/\\-]\\d{1,2}[月\\/\\-]\\d{1,2}[日]?/g, // 2024年12月25日, 2024/12/25, 2024-12-25
+                        /\\d{1,2}[月\\/\\-]\\d{1,2}[日]?[,\\s]*\\d{4}/g,     // 12月25日, 2024
+                        /\\d{4}\\d{2}\\d{2}/g,                              // 20241225
+                        /(今日|本日|昨日)/g,                                  // 相対的な日付表現
+                        /\\d{1,2}日前/g                                     // N日前
+                    ];
+                    
+                    const searchText = dateElement ? dateElement.textContent : text;
+                    
+                    for (const pattern of datePatterns) {
+                        const matches = searchText.match(pattern);
+                        if (matches) {
+                            for (const match of matches) {
+                                let date = null;
+                                
+                                if (match === '今日' || match === '本日') {
+                                    date = new Date();
+                                } else if (match === '昨日') {
+                                    date = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                                } else if (match.includes('日前')) {
+                                    const days = parseInt(match.match(/\\d+/)[0]);
+                                    date = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+                                } else {
+                                    // 通常の日付文字列を解析
+                                    let dateStr = match
+                                        .replace(/[年月日]/g, '/')
+                                        .replace(/[-]/g, '/')
+                                        .replace(/\\/\\/+/g, '/')
+                                        .replace(/\\/$/, '');
+                                    
+                                    date = new Date(dateStr);
+                                }
+                                
+                                if (date && !isNaN(date.getTime())) {
+                                    return date;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // デフォルトで今日の日付を返す（但し、より厳密な判定が必要な場合はnullを返す）
+                    return new Date();
+                }
+                
+                // コンテンツプレビュー抽出
+                function extractContentPreview(element) {
+                    const parent = element.closest ? element.closest('article, .news-item, .post, .entry') : null;
+                    if (parent) {
+                        const content = parent.textContent || '';
+                        return content.replace(/\\s+/g, ' ').substring(0, 200).trim();
+                    }
+                    return element.textContent ? element.textContent.substring(0, 200).trim() : '';
+                }
+
+                // バックグラウンドスクリプトからのメッセージを受信
+                chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+                    if (request.action === 'scrape') {
+                        try {
+                            const results = scrapePageContent(
+                                request.keywords, 
+                                request.dateFrom, 
+                                request.dateTo
+                            );
+                            sendResponse({success: true, results: results});
+                        } catch (error) {
+                            sendResponse({success: false, error: error.message});
+                        }
+                    }
+                    return true; // 非同期レスポンスを示す
+                });
+            `;
+
+            const backgroundScript = `
+                // バックグラウンドスクリプト
+                chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+                    if (request.action === 'scrape') {
+                        // 各サイトに対してコンテンツスクリプトを実行
+                        const results = [];
+                        let completedSites = 0;
+                        
+                        request.sites.forEach(async (site, index) => {
+                            try {
+                                const tab = await chrome.tabs.create({url: site.url, active: false});
+                                
+                                setTimeout(async () => {
+                                    try {
+                                        const response = await chrome.tabs.sendMessage(tab.id, {
+                                            action: 'scrape',
+                                            keywords: request.keywords,
+                                            dateFrom: request.dateFrom,
+                                            dateTo: request.dateTo
+                                        });
+                                        
+                                        if (response.success) {
+                                            results.push(...response.results);
+                                        }
+                                        
+                                        await chrome.tabs.remove(tab.id);
+                                        completedSites++;
+                                        
+                                        if (completedSites === request.sites.length) {
+                                            sendResponse({success: true, results: results});
+                                        }
+                                    } catch (error) {
+                                        console.error('タブでのスクレイピングエラー:', error);
+                                        completedSites++;
+                                        
+                                        if (completedSites === request.sites.length) {
+                                            sendResponse({success: true, results: results});
+                                        }
+                                    }
+                                }, 3000); // ページ読み込み待機
+                                
+                            } catch (error) {
+                                console.error('タブ作成エラー:', error);
+                                completedSites++;
+                                
+                                if (completedSites === request.sites.length) {
+                                    sendResponse({success: true, results: results});
+                                }
+                            }
+                        });
+                    }
+                    
+                    return true; // 非同期レスポンス
+                });
+            `;
+
+            // ZIPファイルとして拡張機能をダウンロード
+            const JSZip = window.JSZip || null;
+            
+            if (!JSZip) {
+                // JSZipライブラリがない場合の代替案
+                showStatus('拡張機能の自動生成には追加のライブラリが必要です。手動でファイルを作成してください。', 'warning');
+                
+                // ファイル内容をテキストエリアで表示
+                const popup = window.open('', '_blank', 'width=800,height=600');
+                popup.document.write(`
+                    <html>
+                    <head><title>Chrome拡張機能ファイル</title></head>
+                    <body>
+                        <h2>以下のファイルを作成してChrome拡張機能を作成してください：</h2>
+                        
+                        <h3>manifest.json</h3>
+                        <textarea style="width:100%;height:200px;">${JSON.stringify(manifest, null, 2)}</textarea>
+                        
+                        <h3>content.js</h3>
+                        <textarea style="width:100%;height:300px;">${contentScript}</textarea>
+                        
+                        <h3>background.js</h3>
+                        <textarea style="width:100%;height:300px;">${backgroundScript}</textarea>
+                        
+                        <p>これらのファイルを同一フォルダに保存し、Chromeの拡張機能管理画面で「パッケージ化されていない拡張機能を読み込む」を選択してください。</p>
+                    </body>
+                    </html>
+                `);
+                return;
+            }
+        }
+
+        // robots.txtチェック機能
+        async function checkRobotsTxt(url) {
+            try {
+                const baseUrl = new URL(url).origin;
+                const robotsUrl = `${baseUrl}/robots.txt`;
+                
+                const response = await fetch(robotsUrl);
+                if (response.ok) {
+                    const robotsText = await response.text();
+                    console.log(`${baseUrl} の robots.txt:`, robotsText);
+                    return robotsText;
+                }
+            } catch (error) {
+                console.log(`${url} のrobots.txtを取得できませんでした:`, error);
+            }
+            return null;
+        }
+
+        // 設定保存機能
+        function saveConfiguration() {
+            const config = {
+                sites: sites,
+                keywords: keywords,
+                method: selectedMethod,
+                proxyUrl: document.getElementById('proxyUrl').value,
+                apiKey: document.getElementById('apiKey').value,
+                externalApiUrl: document.getElementById('externalApiUrl').value,
+                externalApiKey: document.getElementById('externalApiKey').value
+            };
+            
+            const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'scraping_config.json';
+            link.click();
+            
+            showStatus('設定をエクスポートしました', 'success');
+        }
+
+        // 設定読み込み機能
+        function loadConfiguration() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const config = JSON.parse(e.target.result);
+                            
+                            // 設定を復元
+                            sites = config.sites || [];
+                            keywords = config.keywords || [];
+                            selectedMethod = config.method || 'proxy';
+                            
+                            // UIを更新
+                            updateUI();
+                            selectMethod(selectedMethod);
+                            
+                            // 入力フィールドを復元
+                            if (config.proxyUrl) document.getElementById('proxyUrl').value = config.proxyUrl;
+                            if (config.apiKey) document.getElementById('apiKey').value = config.apiKey;
+                            if (config.externalApiUrl) document.getElementById('externalApiUrl').value = config.externalApiUrl;
+                            if (config.externalApiKey) document.getElementById('externalApiKey').value = config.externalApiKey;
+                            
+                            showStatus('設定を読み込みました', 'success');
+                        } catch (error) {
+                            showStatus('設定ファイルの読み込みに失敗しました', 'error');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+
+        // UI更新
+        function updateUI() {
+            // サイトリストの更新
+            const siteList = document.getElementById('siteList');
+            siteList.innerHTML = '';
+            sites.forEach(site => addSiteToList(site));
+            
+            // キーワードリストの更新
+            const keywordList = document.getElementById('keywordList');
+            keywordList.innerHTML = '';
+            keywords.forEach(keyword => addKeywordToList(keyword));
         }
 
         // エンターキーでの追加機能
-        document.getElementById('siteInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                addSite();
-            }
-        });
-
-        document.getElementById('siteNameInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                addSite();
-            }
-        });
-
-        document.getElementById('keywordInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                addKeyword();
-            }
-        });
-
-        // 初期化メッセージ
         document.addEventListener('DOMContentLoaded', function() {
-            showStatus('アプリケーションが準備できました', 'success');
+            document.getElementById('siteInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addSite();
+            });
+
+            document.getElementById('siteNameInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addSite();
+            });
+
+            document.getElementById('keywordInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addKeyword();
+            });
+
+            // 設定保存・読み込みボタンの追加
+            const configButtons = `
+                <div style="margin-top: 20px; text-align: center; gap: 10px; display: flex; justify-content: center; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="saveConfiguration()">設定をエクスポート</button>
+                    <button class="btn btn-primary" onclick="loadConfiguration()">設定をインポート</button>
+                </div>
+            `;
+            
+            document.querySelector('.main-content').insertAdjacentHTML('beforeend', configButtons);
+            
+            showStatus('入札広告スクレイピングアプリが準備できました', 'success');
         });
     </script>
 </body>
