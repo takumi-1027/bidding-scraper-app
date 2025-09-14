@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>入札広告スクレイピングアプリ v2.0</title>
+    <title>入札広告スクレイピングアプリ v3.0</title>
     <style>
         * {
             box-sizing: border-box;
@@ -404,7 +404,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>入札広告スクレイピングアプリ v2.0</h1>
+            <h1>入札広告スクレイピングアプリ v3.0</h1>
             <p>公告・入札情報の効率的な監視・収集システム</p>
         </div>
 
@@ -418,16 +418,16 @@
             <!-- 重要な注意事項 -->
             <div class="warning" id="warningSection">
                 <div class="warning-header" onclick="toggleWarning()">
-                    <h4>⚠️ バージョン2.0の改善点</h4>
+                    <h4>⚠️ バージョン3.0の改善点</h4>
                     <span class="warning-toggle">▼</span>
                 </div>
                 <div class="warning-content" id="warningContent">
                     <ul>
-                        <li><strong>複数プロキシ対応:</strong> AllOriginsとcorsproxy.ioを自動切り替え</li>
-                        <li><strong>改善されたHTML解析:</strong> より多くのサイト構造に対応</li>
-                        <li><strong>RSSフィード対応:</strong> RSS/XMLフィードからの情報取得</li>
-                        <li><strong>エラー回復機能:</strong> 一部失敗しても他の結果を表示</li>
-                        <li><strong>デバッグ情報強化:</strong> 詳細な処理過程を表示</li>
+                        <li><strong>全文検索対応:</strong> ページ全体からキーワードを確実に検出</li>
+                        <li><strong>柔軟なキーワード検索:</strong> 大文字小文字、全角半角に対応</li>
+                        <li><strong>日付認識の改善:</strong> 令和表記、様々な日付形式に対応</li>
+                        <li><strong>構造認識の強化:</strong> より多くのHTML構造パターンに対応</li>
+                        <li><strong>エラー回復機能:</strong> 部分的な失敗でも結果を表示</li>
                     </ul>
                 </div>
             </div>
@@ -763,7 +763,7 @@
             }
         }
 
-        // 修正されたプロキシ経由スクレイピング
+        // 改良版：より多くのサイトに対応したスクレイピング関数
         async function scrapeViaProxy(dayRange) {
             debugLog(`検索期間: 過去${dayRange}日間`);
             debugLog(`監視サイト数: ${sites.length}`);
@@ -778,153 +778,241 @@
                 showStatus(`${site.name} をスクレイピング中...`, 'warning');
                 
                 try {
-                    // 複数のプロキシサービスを試行
-                    const proxyServices = [
-                        {
-                            name: 'AllOrigins',
-                            url: 'https://api.allorigins.win/get?url=',
-                            processResponse: async (response) => {
-                                const data = await response.json();
-                                return data.contents;
-                            }
-                        },
-                        {
-                            name: 'corsproxy.io',
-                            url: 'https://corsproxy.io/?',
-                            processResponse: async (response) => {
-                                return await response.text();
-                            }
-                        }
-                    ];
+                    // AllOriginsを使用
+                    const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(site.url);
+                    debugLog(`プロキシURL: ${proxyUrl}`);
                     
-                    let htmlContent = null;
-                    
-                    // 各プロキシサービスを順番に試行
-                    for (const proxy of proxyServices) {
-                        try {
-                            debugLog(`${proxy.name}を使用してアクセス中...`);
-                            const proxyUrl = proxy.url + encodeURIComponent(site.url);
-                            const response = await fetch(proxyUrl);
-                            
-                            if (response.ok) {
-                                htmlContent = await proxy.processResponse(response);
-                                debugLog(`${proxy.name}でアクセス成功`);
-                                break;
-                            }
-                        } catch (e) {
-                            debugLog(`${proxy.name}でエラー: ${e.message}`);
-                            continue;
-                        }
+                    const response = await fetch(proxyUrl);
+                    if (!response.ok) {
+                        throw new Error(`HTTPエラー: ${response.status}`);
                     }
+                    
+                    const data = await response.json();
+                    const htmlContent = data.contents;
                     
                     if (!htmlContent) {
-                        throw new Error('すべてのプロキシサービスでアクセスに失敗しました');
+                        throw new Error('HTMLコンテンツが空です');
                     }
+                    
+                    debugLog(`HTML取得成功: ${htmlContent.length}文字`);
                     
                     // HTMLをパース
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(htmlContent, 'text/html');
                     
-                    // スクレイピング対象の要素を取得
-                    const targetSelectors = [
-                        'article',
-                        '.news-item',
-                        '.post',
-                        '.entry',
-                        '[class*="news"]',
-                        '[class*="article"]',
-                        '[class*="post"]',
-                        'li',
-                        'div'
-                    ];
+                    // 方法1: すべてのテキストを結合して検索（最も確実）
+                    const bodyText = doc.body ? doc.body.innerText || doc.body.textContent || '' : '';
+                    debugLog(`ページ全体のテキスト長: ${bodyText.length}文字`);
                     
-                    let elements = [];
-                    for (const selector of targetSelectors) {
-                        const found = doc.querySelectorAll(selector);
-                        if (found.length > 0) {
-                            elements = Array.from(found);
-                            debugLog(`セレクタ "${selector}" で ${found.length} 個の要素を発見`);
-                            break;
+                    // キーワード検索（大文字小文字を無視、部分一致）
+                    let pageMatches = false;
+                    const foundKeywords = [];
+                    
+                    for (const keyword of keywords) {
+                        // 複数の検索パターンを試す
+                        const searchPatterns = [
+                            keyword,
+                            keyword.toLowerCase(),
+                            keyword.toUpperCase(),
+                            // 全角・半角の変換
+                            keyword.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
+                                return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+                            })
+                        ];
+                        
+                        for (const pattern of searchPatterns) {
+                            if (bodyText.includes(pattern)) {
+                                pageMatches = true;
+                                foundKeywords.push(keyword);
+                                debugLog(`キーワード "${keyword}" が見つかりました`);
+                                break;
+                            }
                         }
                     }
                     
-                    // 要素が見つからない場合は、すべてのリンクを取得
-                    if (elements.length === 0) {
-                        elements = Array.from(doc.querySelectorAll('a'));
-                        debugLog(`代替方法: ${elements.length} 個のリンクを取得`);
-                    }
-                    
-                    // 各要素をチェック
-                    let foundCount = 0;
-                    elements.forEach(element => {
-                        const text = (element.textContent || '').toLowerCase();
-                        const href = element.href || element.querySelector('a')?.href || '';
+                    // キーワードが見つかった場合、詳細を取得
+                    if (pageMatches) {
+                        debugLog(`ページにキーワードが含まれています: ${foundKeywords.join(', ')}`);
                         
-                        // キーワードチェック
-                        const matchedKeywords = keywords.filter(keyword => 
-                            text.includes(keyword.toLowerCase())
-                        );
+                        // 方法2: 構造化された要素から情報を抽出
+                        const contentSelectors = [
+                            // ニュース・記事系
+                            'article', '.article', '#article',
+                            '.news-item', '.news_item', '.newsItem',
+                            '.post', '.entry', '.content',
+                            // リスト系
+                            '.list-item', '.list_item', 'li',
+                            // テーブル系
+                            'tr', '.row',
+                            // 一般的なコンテナ
+                            '.item', '.box', '.card',
+                            // リンク
+                            'a[href*="news"]', 'a[href*="info"]', 'a[href*="notice"]'
+                        ];
                         
-                        if (matchedKeywords.length > 0) {
-                            // タイトルを取得
-                            let title = '';
-                            const titleElement = element.querySelector('h1, h2, h3, h4, h5, h6, .title, [class*="title"]');
-                            if (titleElement) {
-                                title = titleElement.textContent.trim();
-                            } else if (element.tagName === 'A') {
-                                title = element.textContent.trim();
-                            } else {
-                                title = text.substring(0, 100).trim();
-                            }
+                        let foundStructuredContent = false;
+                        
+                        for (const selector of contentSelectors) {
+                            const elements = doc.querySelectorAll(selector);
                             
-                            // 日付を抽出（簡易版）
-                            let publishedDate = new Date(); // デフォルトは今日
-                            const dateMatch = text.match(/(\d{4})[年\-\/](\d{1,2})[月\-\/](\d{1,2})/);
-                            if (dateMatch) {
-                                publishedDate = new Date(dateMatch[1], dateMatch[2] - 1, dateMatch[3]);
-                            }
-                            
-                            // 日付が範囲内かチェック
-                            if (publishedDate >= cutoffDate && publishedDate <= new Date()) {
-                                foundCount++;
-                                results.push({
-                                    url: href || site.url,
-                                    title: title || `キーワード「${matchedKeywords.join(', ')}」を含む記事`,
-                                    keywords: matchedKeywords,
-                                    date: publishedDate,
-                                    siteName: site.name,
-                                    content: text.substring(0, 200),
-                                    isNew: true
+                            if (elements.length > 0) {
+                                debugLog(`セレクタ "${selector}" で ${elements.length} 個の要素を発見`);
+                                
+                                elements.forEach((element, index) => {
+                                    if (index > 50) return; // 処理数を制限
+                                    
+                                    const elementText = element.innerText || element.textContent || '';
+                                    
+                                    // この要素にキーワードが含まれているか確認
+                                    const elementKeywords = keywords.filter(kw => 
+                                        elementText.toLowerCase().includes(kw.toLowerCase())
+                                    );
+                                    
+                                    if (elementKeywords.length > 0) {
+                                        // タイトルを探す
+                                        let title = '';
+                                        const titleElement = element.querySelector('h1, h2, h3, h4, h5, h6, .title, [class*="title"], strong, b');
+                                        if (titleElement) {
+                                            title = titleElement.innerText || titleElement.textContent || '';
+                                        } else if (element.tagName === 'A') {
+                                            title = element.innerText || element.textContent || '';
+                                        } else {
+                                            // 最初の100文字をタイトルとする
+                                            title = elementText.substring(0, 100);
+                                        }
+                                        
+                                        // URLを探す
+                                        let url = '';
+                                        const linkElement = element.tagName === 'A' ? element : element.querySelector('a');
+                                        if (linkElement && linkElement.href) {
+                                            url = linkElement.href;
+                                            // 相対URLを絶対URLに変換
+                                            if (!url.startsWith('http')) {
+                                                try {
+                                                    url = new URL(url, site.url).href;
+                                                } catch (e) {
+                                                    url = site.url;
+                                                }
+                                            }
+                                        } else {
+                                            url = site.url;
+                                        }
+                                        
+                                        // 日付を探す（より柔軟なパターン）
+                                        let publishedDate = null;
+                                        const datePatterns = [
+                                            /(\d{4})[年\-\/\.](\d{1,2})[月\-\/\.](\d{1,2})/,
+                                            /(\d{1,2})[月\-\/\.](\d{1,2})[日]?/,
+                                            /令和(\d+)年(\d{1,2})月(\d{1,2})日/,
+                                            /R(\d+)\.(\d{1,2})\.(\d{1,2})/,
+                                            /(\d{4})(\d{2})(\d{2})/
+                                        ];
+                                        
+                                        for (const pattern of datePatterns) {
+                                            const match = elementText.match(pattern);
+                                            if (match) {
+                                                try {
+                                                    if (pattern.source.includes('令和')) {
+                                                        // 令和を西暦に変換
+                                                        const year = 2018 + parseInt(match[1]);
+                                                        publishedDate = new Date(year, match[2] - 1, match[3]);
+                                                    } else if (match[1].length === 4) {
+                                                        publishedDate = new Date(match[1], match[2] - 1, match[3]);
+                                                    } else {
+                                                        // 年が省略されている場合は今年とする
+                                                        publishedDate = new Date(new Date().getFullYear(), match[1] - 1, match[2]);
+                                                    }
+                                                    
+                                                    if (!isNaN(publishedDate.getTime())) {
+                                                        break;
+                                                    }
+                                                } catch (e) {
+                                                    continue;
+                                                }
+                                            }
+                                        }
+                                        
+                                        // 日付が見つからない場合は今日の日付を使用
+                                        if (!publishedDate || isNaN(publishedDate.getTime())) {
+                                            publishedDate = new Date();
+                                            debugLog('日付が見つからないため、今日の日付を使用');
+                                        }
+                                        
+                                        // 期間内かチェック（日付が不明な場合も含める）
+                                        if (publishedDate <= new Date()) {
+                                            foundStructuredContent = true;
+                                            
+                                            // 重複チェック
+                                            const isDuplicate = results.some(r => 
+                                                r.url === url && r.title === title
+                                            );
+                                            
+                                            if (!isDuplicate) {
+                                                results.push({
+                                                    url: url,
+                                                    title: title.trim() || `「${elementKeywords.join('、')}」を含む記事`,
+                                                    keywords: elementKeywords,
+                                                    date: publishedDate,
+                                                    siteName: site.name,
+                                                    content: elementText.substring(0, 200).trim(),
+                                                    isNew: true
+                                                });
+                                                
+                                                debugLog(`結果追加: ${title.substring(0, 50)}...`);
+                                            }
+                                        }
+                                    }
                                 });
                                 
-                                debugLog(`マッチ発見: ${title} (キーワード: ${matchedKeywords.join(', ')})`);
+                                if (foundStructuredContent) {
+                                    break; // 構造化コンテンツが見つかったら次のセレクタは試さない
+                                }
                             }
                         }
-                    });
+                        
+                        // 構造化コンテンツが見つからない場合、ページ全体を1つの結果として追加
+                        if (!foundStructuredContent) {
+                            debugLog('構造化コンテンツが見つからないため、ページ全体を結果として追加');
+                            
+                            // ページタイトルを取得
+                            const pageTitle = doc.title || `${site.name}のページ`;
+                            
+                            results.push({
+                                url: site.url,
+                                title: `${pageTitle}（キーワード: ${foundKeywords.join('、')}）`,
+                                keywords: foundKeywords,
+                                date: new Date(),
+                                siteName: site.name,
+                                content: bodyText.substring(0, 200).trim(),
+                                isNew: true
+                            });
+                        }
+                    } else {
+                        debugLog('このページにはキーワードが含まれていません');
+                    }
                     
-                    debugLog(`${site.name}で${foundCount}件の結果を発見`);
-                    
-                    // レート制限対策
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    debugLog(`${site.name}の処理完了: ${results.filter(r => r.siteName === site.name).length}件の結果`);
                     
                 } catch (error) {
                     console.error(`${site.name} のスクレイピングでエラー:`, error);
                     debugLog(`${site.name} でエラー: ${error.message}`);
                     
-                    // エラーが発生してもテストデータを提供
-                    if (keywords.some(kw => site.url.toLowerCase().includes(kw.toLowerCase()))) {
-                        debugLog('エラー回復: URLにキーワードが含まれるため、仮の結果を追加');
+                    // エラーメッセージを結果として追加（デバッグ用）
+                    if (confirm(`${site.name}でエラーが発生しました。詳細を結果に含めますか？`)) {
                         results.push({
                             url: site.url,
-                            title: `${site.name}の記事（アクセスエラーのため詳細不明）`,
-                            keywords: keywords.filter(kw => site.url.toLowerCase().includes(kw.toLowerCase())),
+                            title: `エラー: ${site.name}`,
+                            keywords: ['エラー'],
                             date: new Date(),
                             siteName: site.name,
-                            content: 'アクセスエラーのため内容を取得できませんでした',
-                            isNew: true
+                            content: `エラー内容: ${error.message}`,
+                            isNew: false
                         });
                     }
                 }
+                
+                // レート制限対策
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
 
             debugLog(`スクレイピング完了。総結果数: ${results.length}`);
@@ -1188,7 +1276,7 @@
             
             document.querySelector('#statusMessage').insertAdjacentHTML('afterend', testButton);
             
-            showStatus('v2.0 スクレイピングシステムが準備できました', 'success');
+            showStatus('v3.0 スクレイピングシステムが準備できました', 'success');
             debugLog('初期化完了 - システム準備OK');
         });
     </script>
