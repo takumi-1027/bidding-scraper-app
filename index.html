@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>建築設備入札スクレイピングシステム v4.0</title>
+    <title>建築設備入札スクレイピングシステム v5.0 - 高精度日付版</title>
     <style>
         * {
             box-sizing: border-box;
@@ -82,7 +82,7 @@
             padding: 10px;
             border-radius: 5px;
             white-space: pre-wrap;
-            max-height: 200px;
+            max-height: 300px;
             overflow-y: auto;
         }
 
@@ -289,6 +289,30 @@
             font-weight: 600;
         }
 
+        .date-settings {
+            background: #e8f4fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+
+        .date-settings h4 {
+            color: #1976d2;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .date-settings label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .date-settings input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
         .results {
             background: #fff;
             border-radius: 10px;
@@ -316,6 +340,11 @@
             transform: translateY(-2px);
         }
 
+        .result-item.low-confidence {
+            border-left-color: #ff9800;
+            background: #fff3e0;
+        }
+
         .result-url {
             color: #2196F3;
             text-decoration: none;
@@ -331,6 +360,30 @@
             color: #666;
             font-size: 0.9rem;
             margin-top: 5px;
+        }
+
+        .confidence-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .confidence-high {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .confidence-medium {
+            background: #ff9800;
+            color: white;
+        }
+
+        .confidence-low {
+            background: #f44336;
+            color: white;
         }
 
         .no-results {
@@ -416,29 +469,30 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>建築設備入札スクレイピングシステム v4.0</h1>
-            <p>建築・設備・修繕関連の入札・公告情報専用収集システム</p>
+            <h1>建築設備入札スクレイピングシステム v5.0</h1>
+            <p>高精度日付抽出版 - 建築・設備・修繕関連の入札・公告情報専用収集システム</p>
         </div>
 
         <div class="main-content">
             <!-- デバッグ情報セクション -->
             <div class="debug-section">
-                <h3>🐛 デバッグ情報</h3>
+                <h3>🔍 日付抽出デバッグ情報</h3>
                 <div id="debugInfo" class="debug-info">システム起動中...</div>
             </div>
 
             <!-- 重要な注意事項 -->
             <div class="warning" id="warningSection">
                 <div class="warning-header" onclick="toggleWarning()">
-                    <h4>⚠️ v4.0の主要変更点</h4>
+                    <h4>⚠️ v5.0 高精度日付抽出の改善点</h4>
                     <span class="warning-toggle">▼</span>
                 </div>
                 <div class="warning-content" id="warningContent">
                     <ul>
-                        <li><strong>固定キーワードシステム:</strong> 建築・設備関連の29個のキーワードを事前設定</li>
-                        <li><strong>専門分野特化:</strong> 入札、工事、修繕、設備関連に完全特化</li>
-                        <li><strong>運用の簡素化:</strong> キーワード管理が不要、即座に利用開始可能</li>
-                        <li><strong>検索精度向上:</strong> 専門用語を包括的にカバー、誤検知を最小化</li>
+                        <li><strong>日付不明記事の除外:</strong> 日付が特定できない記事は結果から完全除外</li>
+                        <li><strong>多段階抽出システム:</strong> 構造化データ → メタデータ → パターンマッチングの優先順位</li>
+                        <li><strong>和暦・相対日付対応:</strong> 令和表記、「昨日」「一昨日」「○日前」に対応</li>
+                        <li><strong>信頼度システム:</strong> 抽出した日付の信頼度を3段階で表示</li>
+                        <li><strong>JST対応:</strong> 日本標準時での正確な期間判定</li>
                     </ul>
                 </div>
             </div>
@@ -451,9 +505,7 @@
                     <input type="text" id="siteNameInput" placeholder="サイト名（任意）" />
                     <button class="btn btn-primary" onclick="addSite()">サイト追加</button>
                 </div>
-                <div id="siteList">
-                    <!-- サイトリストがここに表示される -->
-                </div>
+                <div id="siteList"></div>
             </div>
 
             <!-- 固定キーワード表示セクション -->
@@ -461,12 +513,9 @@
                 <h2>監視キーワード（固定設定）</h2>
                 <div class="keyword-info">
                     <h4>🏗️ 建築・設備・修繕関連キーワード</h4>
-                    <p>以下の29個のキーワードが自動的に設定され、これらを含む情報をスクレイピングします。<br>
-                    建築工事、設備工事、修繕工事などの入札・公告情報の収集に特化したキーワード群です。</p>
+                    <p>以下の29個のキーワードが自動的に設定され、これらを含む情報をスクレイピングします。</p>
                 </div>
-                <div class="keyword-container" id="keywordDisplay">
-                    <!-- 固定キーワードがここに表示される -->
-                </div>
+                <div class="keyword-container" id="keywordDisplay"></div>
             </div>
 
             <!-- プロキシ設定セクション -->
@@ -481,13 +530,24 @@
             <!-- スクレイピング実行セクション -->
             <div class="section">
                 <h2>スクレイピング実行</h2>
-                <div class="input-group">
-                    <label>検索期間: </label>
-                    <input type="number" id="dayRange" placeholder="過去何日間" value="7" min="1" max="30" />
-                    <span>日間</span>
+                <div class="date-settings">
+                    <h4>📅 日付抽出設定</h4>
+                    <div class="input-group">
+                        <label>検索期間: </label>
+                        <input type="number" id="dayRange" placeholder="過去何日間" value="7" min="1" max="30" />
+                        <span>日間</span>
+                    </div>
+                    <label>
+                        <input type="checkbox" id="includeUndated" />
+                        日付不明の記事も含める（精度は低下します）
+                    </label>
+                    <label>
+                        <input type="checkbox" id="showConfidence" checked />
+                        日付信頼度を表示する
+                    </label>
                 </div>
                 <button class="btn btn-success" id="scrapeBtn" onclick="startScraping()">
-                    スクレイピング開始
+                    高精度スクレイピング開始
                 </button>
                 <div id="statusMessage"></div>
             </div>
@@ -503,7 +563,7 @@
     </div>
 
     <script>
-        // 固定キーワードリスト（建築・設備・修繕関連）
+        // 固定キーワードリスト
         const FIXED_KEYWORDS = [
             '入札', '公告', '競争', 'オープンカウンタ', 'OC',
             '改修', '改装', '工事', '防水', '塗装', '壁', '建物',
@@ -514,32 +574,309 @@
 
         // グローバル変数
         let sites = [];
-        let keywords = [...FIXED_KEYWORDS]; // 固定キーワードをコピー
+        let keywords = [...FIXED_KEYWORDS];
 
-        // 正規化関数（全角・半角、大文字小文字対応）
-        function normalizeText(str) {
-            return (str || '')
-                .replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
-                .toLowerCase();
+        // 日付ユーティリティ関数
+        function toHalfWidth(str) {
+            if (!str) return '';
+            return str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, ch => 
+                String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)
+            ).replace(/[－―ー–]/g, '-').replace(/[／]/g, '/');
         }
 
-        // 改良されたキーワードマッチング関数
+        function makeJSTDate(year, month, day, hour = 0, minute = 0, second = 0) {
+            try {
+                const date = new Date(year, month - 1, day, hour, minute, second);
+                return isNaN(date.getTime()) ? null : date;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function eraToWesternYear(era, year) {
+            const eraMap = {
+                '令和': 2018,
+                '平成': 1988,
+                '昭和': 1925,
+                '大正': 1911
+            };
+            
+            if (!(era in eraMap)) return null;
+            const yearNum = (year === '元') ? 1 : parseInt(year, 10);
+            return eraMap[era] + yearNum;
+        }
+
+        // 高精度日付抽出システム
+        function extractDateWithHighPrecision(element, doc, baseDate = new Date()) {
+            debugLog(`🔍 高精度日付抽出開始: ${element.textContent?.substring(0, 50) || 'N/A'}...`);
+            
+            const candidates = [];
+            
+            // 1. JSON-LD構造化データ（最高精度）
+            try {
+                const jsonScripts = doc.querySelectorAll('script[type="application/ld+json"]');
+                for (const script of jsonScripts) {
+                    const data = JSON.parse(script.textContent);
+                    const dateFields = ['datePublished', 'dateCreated', 'uploadDate', 'dateModified'];
+                    
+                    function extractFromJson(obj) {
+                        if (!obj || typeof obj !== 'object') return;
+                        
+                        for (const field of dateFields) {
+                            if (obj[field]) {
+                                const date = parseAdvancedDate(obj[field], baseDate);
+                                if (date) {
+                                    candidates.push({
+                                        date: date,
+                                        confidence: 'high',
+                                        source: `JSON-LD:${field}`
+                                    });
+                                }
+                            }
+                        }
+                        
+                        if (Array.isArray(obj)) {
+                            obj.forEach(extractFromJson);
+                        } else {
+                            Object.values(obj).forEach(extractFromJson);
+                        }
+                    }
+                    
+                    extractFromJson(data);
+                }
+            } catch (e) {
+                debugLog(`JSON-LD解析エラー: ${e.message}`);
+            }
+
+            // 2. メタデータ（高精度）
+            const metaSelectors = [
+                'meta[property="article:published_time"]',
+                'meta[property="article:modified_time"]',
+                'meta[name="publication-date"]',
+                'meta[name="date"]',
+                'meta[property="og:updated_time"]'
+            ];
+            
+            for (const selector of metaSelectors) {
+                const meta = doc.querySelector(selector);
+                if (meta) {
+                    const content = meta.getAttribute('content');
+                    const date = parseAdvancedDate(content, baseDate);
+                    if (date) {
+                        candidates.push({
+                            date: date,
+                            confidence: 'high',
+                            source: `メタ:${selector.split('[')[1]?.split(']')[0]}`
+                        });
+                    }
+                }
+            }
+
+            // 3. HTML構造化要素（中精度）
+            const dateSelectors = [
+                'time[datetime]',
+                '.date', '.datetime', '.published', '.post-date',
+                '[class*="date"]', '[class*="time"]'
+            ];
+            
+            for (const selector of dateSelectors) {
+                const elements = element.querySelectorAll(selector);
+                elements.forEach(el => {
+                    const datetime = el.getAttribute('datetime');
+                    const text = el.textContent;
+                    
+                    if (datetime) {
+                        const date = parseAdvancedDate(datetime, baseDate);
+                        if (date) {
+                            candidates.push({
+                                date: date,
+                                confidence: 'high',
+                                source: `HTML:${selector}[datetime]`
+                            });
+                        }
+                    }
+                    
+                    if (text) {
+                        const date = parseAdvancedDate(text, baseDate);
+                        if (date) {
+                            candidates.push({
+                                date: date,
+                                confidence: 'medium',
+                                source: `HTML:${selector}`
+                            });
+                        }
+                    }
+                });
+            }
+
+            // 4. テキストパターンマッチング（低精度）
+            const elementText = element.textContent || element.innerText || '';
+            const textDate = parseAdvancedDate(elementText, baseDate);
+            if (textDate) {
+                candidates.push({
+                    date: textDate,
+                    confidence: 'low',
+                    source: 'テキストパターン'
+                });
+            }
+
+            // 候補から最適なものを選択
+            if (candidates.length === 0) {
+                debugLog('❌ 日付候補が見つかりませんでした');
+                return null;
+            }
+
+            // 有効性チェック
+            const now = new Date();
+            const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+            const oneWeekFuture = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            
+            const validCandidates = candidates.filter(c => 
+                c.date >= oneYearAgo && c.date <= oneWeekFuture
+            );
+
+            if (validCandidates.length === 0) {
+                debugLog('❌ 有効な日付候補がありませんでした');
+                return null;
+            }
+
+            // 信頼度順でソート
+            const confidenceOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+            validCandidates.sort((a, b) => {
+                const confDiff = confidenceOrder[b.confidence] - confidenceOrder[a.confidence];
+                return confDiff !== 0 ? confDiff : b.date - a.date;
+            });
+
+            const best = validCandidates[0];
+            debugLog(`✅ 最適な日付を選択: ${best.date.toISOString()} (信頼度: ${best.confidence}, ソース: ${best.source})`);
+            
+            return best;
+        }
+
+        // 包括的日付パース関数
+        function parseAdvancedDate(dateStr, baseDate = new Date()) {
+            if (!dateStr || typeof dateStr !== 'string') return null;
+            
+            const normalized = toHalfWidth(dateStr.trim());
+            
+            // 相対日付処理
+            if (/本日|今日/.test(normalized)) {
+                return makeJSTDate(baseDate.getFullYear(), baseDate.getMonth() + 1, baseDate.getDate());
+            }
+            if (/昨日/.test(normalized)) {
+                const yesterday = new Date(baseDate.getTime() - 24 * 60 * 60 * 1000);
+                return makeJSTDate(yesterday.getFullYear(), yesterday.getMonth() + 1, yesterday.getDate());
+            }
+            if (/一昨日/.test(normalized)) {
+                const dayBefore = new Date(baseDate.getTime() - 2 * 24 * 60 * 60 * 1000);
+                return makeJSTDate(dayBefore.getFullYear(), dayBefore.getMonth() + 1, dayBefore.getDate());
+            }
+            
+            const relativeMatch = normalized.match(/(\d+)\s*日前/);
+            if (relativeMatch) {
+                const daysAgo = parseInt(relativeMatch[1], 10);
+                const targetDate = new Date(baseDate.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+                return makeJSTDate(targetDate.getFullYear(), targetDate.getMonth() + 1, targetDate.getDate());
+            }
+
+            // ISO形式
+            const isoMatch = normalized.match(/(\d{4})-(\d{1,2})-(\d{1,2})(?:T(\d{1,2}):(\d{1,2}):(\d{1,2}))?/);
+            if (isoMatch) {
+                return makeJSTDate(
+                    parseInt(isoMatch[1], 10),
+                    parseInt(isoMatch[2], 10),
+                    parseInt(isoMatch[3], 10),
+                    parseInt(isoMatch[4] || '0', 10),
+                    parseInt(isoMatch[5] || '0', 10),
+                    parseInt(isoMatch[6] || '0', 10)
+                );
+            }
+
+            // 日本語表記: YYYY年MM月DD日
+            const jpMatch = normalized.match(/(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
+            if (jpMatch) {
+                return makeJSTDate(
+                    parseInt(jpMatch[1], 10),
+                    parseInt(jpMatch[2], 10),
+                    parseInt(jpMatch[3], 10)
+                );
+            }
+
+            // 和暦: 令和X年MM月DD日
+            const eraMatch = normalized.match(/(令和|平成|昭和|大正)\s*(元|\d+)\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
+            if (eraMatch) {
+                const westernYear = eraToWesternYear(eraMatch[1], eraMatch[2]);
+                if (westernYear) {
+                    return makeJSTDate(
+                        westernYear,
+                        parseInt(eraMatch[3], 10),
+                        parseInt(eraMatch[4], 10)
+                    );
+                }
+            }
+
+            // 和暦略記: R6.1.5
+            const eraShortMatch = normalized.match(/([RrHhSs])(\d+)\.(\d{1,2})\.(\d{1,2})/);
+            if (eraShortMatch) {
+                const eraMap = { 'R': '令和', 'r': '令和', 'H': '平成', 'h': '平成', 'S': '昭和', 's': '昭和' };
+                const era = eraMap[eraShortMatch[1]];
+                if (era) {
+                    const westernYear = eraToWesternYear(era, eraShortMatch[2]);
+                    if (westernYear) {
+                        return makeJSTDate(
+                            westernYear,
+                            parseInt(eraShortMatch[3], 10),
+                            parseInt(eraShortMatch[4], 10)
+                        );
+                    }
+                }
+            }
+
+            // スラッシュ/ハイフン区切り: YYYY/MM/DD
+            const slashMatch = normalized.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+            if (slashMatch) {
+                return makeJSTDate(
+                    parseInt(slashMatch[1], 10),
+                    parseInt(slashMatch[2], 10),
+                    parseInt(slashMatch[3], 10)
+                );
+            }
+
+            // 月日のみ: MM月DD日（年は現在年で推定）
+            const monthDayMatch = normalized.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
+            if (monthDayMatch) {
+                let year = baseDate.getFullYear();
+                const month = parseInt(monthDayMatch[1], 10);
+                const day = parseInt(monthDayMatch[2], 10);
+                
+                const testDate = makeJSTDate(year, month, day);
+                if (testDate && testDate > baseDate) {
+                    // 未来日付の場合は前年を試す
+                    const timeDiff = testDate.getTime() - baseDate.getTime();
+                    if (timeDiff > 30 * 24 * 60 * 60 * 1000) { // 30日以上未来
+                        year--;
+                    }
+                }
+                
+                return makeJSTDate(year, month, day);
+            }
+
+            return null;
+        }
+
+        // キーワードマッチング関数
         function matchKeywordsInText(rawText) {
-            const text = normalizeText(rawText);
+            const text = toHalfWidth(rawText.toLowerCase());
             const found = new Set();
             
             for (const kw of FIXED_KEYWORDS) {
-                const nkw = normalizeText(kw);
+                const normalizedKw = toHalfWidth(kw.toLowerCase());
                 
-                // OCの特別処理（誤検知回避）
-                if (nkw === 'oc') {
-                    if (/(^|[^a-z0-9])oc([^a-z0-9]|$)/i.test(rawText)) {
+                if (normalizedKw === 'oc') {
+                    if (/(^|[^a-z0-9])oc([^a-z0-9]|$)/.test(text)) {
                         found.add('OC');
                     }
-                    continue;
-                }
-                
-                if (text.includes(nkw)) {
+                } else if (text.includes(normalizedKw)) {
                     found.add(kw);
                 }
             }
@@ -556,7 +893,7 @@
             console.log(`[DEBUG] ${message}`);
         }
 
-        // 注意事項の表示/非表示切り替え
+        // UI制御関数
         function toggleWarning() {
             const warningSection = document.getElementById('warningSection');
             const warningContent = document.getElementById('warningContent');
@@ -565,7 +902,6 @@
             warningContent.classList.toggle('active');
         }
 
-        // 固定キーワードの表示初期化
         function initializeKeywords() {
             const keywordDisplay = document.getElementById('keywordDisplay');
             keywordDisplay.innerHTML = '';
@@ -580,7 +916,6 @@
             debugLog(`固定キーワード ${FIXED_KEYWORDS.length} 個を設定完了`);
         }
 
-        // サイト追加機能
         function addSite() {
             const urlInput = document.getElementById('siteInput');
             const nameInput = document.getElementById('siteNameInput');
@@ -604,7 +939,7 @@
                 return;
             }
 
-            const siteName = customName || getSiteName(url);
+            const siteName = customName || new URL(url).hostname;
             const newSite = { url, name: siteName };
             sites.push(newSite);
             addSiteToList(newSite);
@@ -612,15 +947,6 @@
             nameInput.value = '';
             showStatus('サイトを追加しました', 'success');
             debugLog(`サイト追加: ${url} (${siteName})`);
-        }
-
-        function getSiteName(url) {
-            try {
-                const domain = new URL(url).hostname;
-                return domain;
-            } catch (e) {
-                return 'サイト名不明';
-            }
         }
 
         function addSiteToList(site) {
@@ -646,69 +972,53 @@
             debugLog(`サイト削除: ${url}`);
         }
 
-        // ステータス表示機能
         function showStatus(message, type) {
             const statusDiv = document.getElementById('statusMessage');
             statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
-            setTimeout(() => {
-                statusDiv.innerHTML = '';
-            }, 5000);
+            setTimeout(() => statusDiv.innerHTML = '', 5000);
         }
 
-        // スクレイピング実行関数
+        // メインスクレイピング関数
         async function startScraping() {
             const resultsDiv = document.getElementById('results');
             const scrapeBtn = document.getElementById('scrapeBtn');
             const dayRange = parseInt(document.getElementById('dayRange').value) || 7;
+            const includeUndated = document.getElementById('includeUndated').checked;
+            const showConfidence = document.getElementById('showConfidence').checked;
             
-            debugLog('建築設備入札スクレイピング開始');
+            debugLog('🚀 高精度日付抽出スクレイピング開始');
+            debugLog(`設定 - 期間: ${dayRange}日, 日付不明含む: ${includeUndated}, 信頼度表示: ${showConfidence}`);
             
-            // バリデーション
             if (sites.length === 0) {
                 showStatus('監視サイトを追加してください', 'error');
-                debugLog('エラー: サイトが未設定');
                 return;
             }
 
-            debugLog(`使用キーワード: ${keywords.join(', ')}`);
-
-            // ローディング状態
             scrapeBtn.disabled = true;
             resultsDiv.innerHTML = `
                 <div class="loading">
                     <div class="spinner"></div>
-                    <p>建築設備関連情報をスクレイピング中...</p>
+                    <p>高精度日付抽出でスクレイピング中...</p>
                 </div>
             `;
 
             try {
-                let results = await scrapeViaProxy(dayRange);
+                const results = await performHighPrecisionScraping(dayRange, includeUndated);
+                displayResults(results, dayRange, showConfidence);
                 
-                // 結果が0件の場合、代替方法を試行
-                if (results.length === 0) {
-                    debugLog('プロキシ経由で結果が得られなかったため、代替方法を試行');
-                    for (const site of sites) {
-                        const altResults = await directFetch(site, keywords, dayRange);
-                        results.push(...altResults);
-                    }
-                }
-                
-                // それでも結果が0件の場合、テストデータを表示するか確認
                 if (results.length === 0 && confirm('結果が見つかりませんでした。テストデータを表示しますか？')) {
-                    results = generateMockData(dayRange);
+                    const testResults = generateTestData(dayRange, showConfidence);
+                    displayResults(testResults, dayRange, showConfidence);
                 }
-                
-                displayResults(results, dayRange);
                 
             } catch (error) {
                 console.error('スクレイピングエラー:', error);
-                debugLog(`エラー: ${error.message}`);
-                showStatus(`スクレイピングでエラーが発生しました: ${error.message}`, 'error');
+                debugLog(`❌ エラー: ${error.message}`);
+                showStatus(`エラーが発生しました: ${error.message}`, 'error');
                 resultsDiv.innerHTML = `
                     <div class="no-results">
                         <h4>エラーが発生しました</h4>
                         <p>${error.message}</p>
-                        <p>設定を確認してから再試行してください。</p>
                     </div>
                 `;
             } finally {
@@ -716,28 +1026,21 @@
             }
         }
 
-        // 改良版スクレイピング関数
-        async function scrapeViaProxy(dayRange) {
-            debugLog(`検索期間: 過去${dayRange}日間`);
-            debugLog(`監視サイト数: ${sites.length}`);
-            debugLog(`固定キーワード数: ${keywords.length}`);
-
+        async function performHighPrecisionScraping(dayRange, includeUndated) {
             const results = [];
             const cutoffDate = new Date(Date.now() - dayRange * 24 * 60 * 60 * 1000);
             
             for (let i = 0; i < sites.length; i++) {
                 const site = sites[i];
-                debugLog(`[${i+1}/${sites.length}] ${site.name} をスクレイピング中...`);
+                debugLog(`[${i+1}/${sites.length}] 🌐 ${site.name} を処理中...`);
                 showStatus(`${site.name} をスクレイピング中...`, 'warning');
                 
                 try {
-                    // AllOriginsを使用
                     const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(site.url);
-                    debugLog(`プロキシURL: ${proxyUrl}`);
-                    
                     const response = await fetch(proxyUrl);
+                    
                     if (!response.ok) {
-                        throw new Error(`HTTPエラー: ${response.status}`);
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
                     
                     const data = await response.json();
@@ -747,247 +1050,171 @@
                         throw new Error('HTMLコンテンツが空です');
                     }
                     
-                    debugLog(`HTML取得成功: ${htmlContent.length}文字`);
+                    debugLog(`✅ HTML取得成功: ${htmlContent.length}文字`);
                     
-                    // HTMLをパース
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(htmlContent, 'text/html');
+                    const bodyText = doc.body ? (doc.body.innerText || doc.body.textContent || '') : '';
                     
-                    // ページ全体のテキストから検索
-                    const bodyText = doc.body ? doc.body.innerText || doc.body.textContent || '' : '';
-                    debugLog(`ページ全体のテキスト長: ${bodyText.length}文字`);
-                    
-                    // 改良されたキーワードマッチング
                     const foundKeywords = matchKeywordsInText(bodyText);
-                    const pageMatches = foundKeywords.length > 0;
                     
-                    // キーワードが見つかった場合、詳細を取得
-                    if (pageMatches) {
-                        debugLog(`ページにキーワードが含まれています: ${foundKeywords.join(', ')}`);
+                    if (foundKeywords.length > 0) {
+                        debugLog(`🎯 キーワード発見: ${foundKeywords.join(', ')}`);
                         
-                        // 構造化された要素から情報を抽出
-                        const contentSelectors = [
-                            'article', '.article', '#article',
-                            '.news-item', '.news_item', '.newsItem',
-                            '.post', '.entry', '.content',
-                            '.list-item', '.list_item', 'li',
-                            'tr', '.row',
-                            '.item', '.box', '.card',
-                            'a[href*="news"]', 'a[href*="info"]', 'a[href*="notice"]'
+                        const selectors = [
+                            'article', '.article', '.news-item', '.post', '.entry',
+                            '.list-item', 'li', 'tr', '.item', '.box', '.card'
                         ];
                         
-                        let foundStructuredContent = false;
+                        let foundContent = false;
                         
-                        for (const selector of contentSelectors) {
+                        for (const selector of selectors) {
                             const elements = doc.querySelectorAll(selector);
                             
                             if (elements.length > 0) {
-                                debugLog(`セレクタ "${selector}" で ${elements.length} 個の要素を発見`);
+                                debugLog(`🔍 "${selector}" で ${elements.length} 個の要素を発見`);
                                 
                                 elements.forEach((element, index) => {
-                                    if (index > 50) return; // 処理数を制限
+                                    if (index > 30) return; // 処理数制限
                                     
                                     const elementText = element.innerText || element.textContent || '';
-                                    
-                                    // この要素にキーワードが含まれているか確認
                                     const elementKeywords = matchKeywordsInText(elementText);
                                     
                                     if (elementKeywords.length > 0) {
-                                        // タイトルを探す
-                                        let title = '';
-                                        const titleElement = element.querySelector('h1, h2, h3, h4, h5, h6, .title, [class*="title"], strong, b');
-                                        if (titleElement) {
-                                            title = titleElement.innerText || titleElement.textContent || '';
-                                        } else if (element.tagName === 'A') {
-                                            title = element.innerText || element.textContent || '';
-                                        } else {
-                                            title = elementText.substring(0, 100);
-                                        }
+                                        const dateResult = extractDateWithHighPrecision(element, doc);
                                         
-                                        // URLを探す
-                                        let url = '';
-                                        const linkElement = element.tagName === 'A' ? element : element.querySelector('a');
-                                        if (linkElement && linkElement.href) {
-                                            url = linkElement.href;
-                                            if (!url.startsWith('http')) {
-                                                try {
-                                                    url = new URL(url, site.url).href;
-                                                } catch (e) {
-                                                    url = site.url;
-                                                }
+                                        let shouldInclude = false;
+                                        let dateInfo = null;
+                                        
+                                        if (dateResult) {
+                                            const { date, confidence, source } = dateResult;
+                                            if (date >= cutoffDate && date <= new Date()) {
+                                                shouldInclude = true;
+                                                dateInfo = { date, confidence, source };
+                                            } else {
+                                                debugLog(`📅 期間外のため除外: ${date.toISOString()}`);
                                             }
+                                        } else if (includeUndated) {
+                                            shouldInclude = true;
+                                            dateInfo = {
+                                                date: new Date(),
+                                                confidence: 'unknown',
+                                                source: '日付不明'
+                                            };
+                                            debugLog('📅 日付不明だが設定により含める');
                                         } else {
-                                            url = site.url;
+                                            debugLog('📅 日付不明のため除外');
                                         }
                                         
-                                        // 日付を探す
-                                        let publishedDate = null;
-                                        const datePatterns = [
-                                            /(\d{4})[年\-\/\.](\d{1,2})[月\-\/\.](\d{1,2})/,
-                                            /(\d{1,2})[月\-\/\.](\d{1,2})[日]?/,
-                                            /令和(\d+)年(\d{1,2})月(\d{1,2})日/,
-                                            /R(\d+)\.(\d{1,2})\.(\d{1,2})/,
-                                            /(\d{4})(\d{2})(\d{2})/
-                                        ];
-                                        
-                                        for (const pattern of datePatterns) {
-                                            const match = elementText.match(pattern);
-                                            if (match) {
-                                                try {
-                                                    if (pattern.source.includes('令和')) {
-                                                        const year = 2018 + parseInt(match[1]);
-                                                        publishedDate = new Date(year, match[2] - 1, match[3]);
-                                                    } else if (match[1].length === 4) {
-                                                        publishedDate = new Date(match[1], match[2] - 1, match[3]);
-                                                    } else {
-                                                        publishedDate = new Date(new Date().getFullYear(), match[1] - 1, match[2]);
-                                                    }
-                                                    
-                                                    if (!isNaN(publishedDate.getTime())) {
-                                                        break;
-                                                    }
-                                                } catch (e) {
-                                                    continue;
-                                                }
-                                            }
-                                        }
-                                        
-                                        // 日付が見つからない場合は今日の日付を使用
-                                        if (!publishedDate || isNaN(publishedDate.getTime())) {
-                                            publishedDate = new Date();
-                                            debugLog('日付が見つからないため、今日の日付を使用');
-                                        }
-                                        
-                                        // 期間内かチェック
-                                        if (publishedDate <= new Date()) {
-                                            foundStructuredContent = true;
+                                        if (shouldInclude) {
+                                            const title = extractTitle(element, elementText);
+                                            const url = extractUrl(element, site.url);
                                             
-                                            // 重複チェック
                                             const isDuplicate = results.some(r => 
-                                                r.url === url && r.title === title
+                                                r.url === url && r.title.trim() === title.trim()
                                             );
                                             
                                             if (!isDuplicate) {
+                                                foundContent = true;
                                                 results.push({
                                                     url: url,
-                                                    title: title.trim() || `「${elementKeywords.join('、')}」を含む建築設備案件`,
+                                                    title: title || `「${elementKeywords.join('、')}」を含む案件`,
                                                     keywords: elementKeywords,
-                                                    date: publishedDate,
+                                                    dateInfo: dateInfo,
                                                     siteName: site.name,
                                                     content: elementText.substring(0, 200).trim(),
                                                     isNew: true
                                                 });
                                                 
-                                                debugLog(`結果追加: ${title.substring(0, 50)}...`);
+                                                debugLog(`✅ 結果追加: ${title?.substring(0, 50) || '無題'}... (信頼度: ${dateInfo.confidence})`);
                                             }
                                         }
                                     }
                                 });
                                 
-                                if (foundStructuredContent) {
-                                    break;
-                                }
+                                if (foundContent) break;
                             }
                         }
                         
-                        // 構造化コンテンツが見つからない場合、ページ全体を1つの結果として追加
-                        if (!foundStructuredContent) {
-                            debugLog('構造化コンテンツが見つからないため、ページ全体を結果として追加');
+                        if (!foundContent) {
+                            debugLog('📄 構造化コンテンツが見つからないため、ページ全体を評価');
+                            const pageDate = extractDateWithHighPrecision(doc.body, doc);
                             
-                            const pageTitle = doc.title || `${site.name}のページ`;
-                            
-                            results.push({
-                                url: site.url,
-                                title: `${pageTitle}（キーワード: ${foundKeywords.join('、')}）`,
-                                keywords: foundKeywords,
-                                date: new Date(),
-                                siteName: site.name,
-                                content: bodyText.substring(0, 200).trim(),
-                                isNew: true
-                            });
-                        }
-                    } else {
-                        debugLog('このページには建築設備関連キーワードが含まれていません');
-                    }
-                    
-                    debugLog(`${site.name}の処理完了: ${results.filter(r => r.siteName === site.name).length}件の結果`);
-                    
-                } catch (error) {
-                    console.error(`${site.name} のスクレイピングでエラー:`, error);
-                    debugLog(`${site.name} でエラー: ${error.message}`);
-                }
-                
-                // レート制限対策
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-
-            debugLog(`スクレイピング完了。総結果数: ${results.length}`);
-            return results;
-        }
-
-        // 直接フェッチ関数（フォールバック）
-        async function directFetch(site, keywords, dayRange) {
-            const results = [];
-            const cutoffDate = new Date(Date.now() - dayRange * 24 * 60 * 60 * 1000);
-            
-            try {
-                const possibleEndpoints = ['/feed', '/rss', '/rss.xml', '/feed.xml'];
-                
-                for (const endpoint of possibleEndpoints) {
-                    try {
-                        const url = new URL(endpoint, site.url).href;
-                        const response = await fetch(url);
-                        if (response.ok) {
-                            const text = await response.text();
-                            if (text.includes('<?xml') || text.includes('<rss')) {
-                                const parser = new DOMParser();
-                                const doc = parser.parseFromString(text, 'text/xml');
-                                const items = doc.querySelectorAll('item');
-                                
-                                items.forEach(item => {
-                                    const title = item.querySelector('title')?.textContent || '';
-                                    const description = item.querySelector('description')?.textContent || '';
-                                    const link = item.querySelector('link')?.textContent || '';
-                                    const pubDate = item.querySelector('pubDate')?.textContent || '';
-                                    
-                                    const content = title + ' ' + description;
-                                    const matchedKeywords = matchKeywordsInText(content);
-                                    
-                                    if (matchedKeywords.length > 0) {
-                                        const date = new Date(pubDate);
-                                        if (date >= cutoffDate) {
-                                            results.push({
-                                                url: link,
-                                                title: title,
-                                                keywords: matchedKeywords,
-                                                date: date,
-                                                siteName: site.name,
-                                                content: description.substring(0, 200),
-                                                isNew: true
-                                            });
-                                        }
-                                    }
+                            if (pageDate && pageDate.date >= cutoffDate) {
+                                const pageTitle = doc.title || `${site.name}のページ`;
+                                results.push({
+                                    url: site.url,
+                                    title: `${pageTitle}（キーワード: ${foundKeywords.join('、')}）`,
+                                    keywords: foundKeywords,
+                                    dateInfo: pageDate,
+                                    siteName: site.name,
+                                    content: bodyText.substring(0, 200).trim(),
+                                    isNew: true
                                 });
-                                
-                                if (results.length > 0) {
-                                    debugLog(`RSSフィードから${results.length}件の結果を取得`);
-                                    break;
-                                }
+                                debugLog(`✅ ページ全体を追加: ${pageTitle}`);
+                            } else if (!pageDate && includeUndated) {
+                                const pageTitle = doc.title || `${site.name}のページ`;
+                                results.push({
+                                    url: site.url,
+                                    title: `${pageTitle}（キーワード: ${foundKeywords.join('、')}）`,
+                                    keywords: foundKeywords,
+                                    dateInfo: {
+                                        date: new Date(),
+                                        confidence: 'unknown',
+                                        source: '日付不明'
+                                    },
+                                    siteName: site.name,
+                                    content: bodyText.substring(0, 200).trim(),
+                                    isNew: true
+                                });
                             }
                         }
-                    } catch (e) {
-                        continue;
+                    } else {
+                        debugLog('❌ キーワードが含まれていません');
                     }
+                    
+                } catch (error) {
+                    console.error(`${site.name} でエラー:`, error);
+                    debugLog(`❌ ${site.name} でエラー: ${error.message}`);
                 }
-            } catch (error) {
-                debugLog(`直接フェッチエラー: ${error.message}`);
+                
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
             
+            debugLog(`🎉 スクレイピング完了: ${results.length}件`);
             return results;
         }
 
-        // 結果表示
-        function displayResults(results, dayRange) {
+        function extractTitle(element, text) {
+            const titleElement = element.querySelector('h1, h2, h3, h4, h5, h6, .title, [class*="title"], strong, b');
+            if (titleElement) {
+                return titleElement.innerText || titleElement.textContent || '';
+            }
+            
+            if (element.tagName === 'A') {
+                return element.innerText || element.textContent || '';
+            }
+            
+            return text.substring(0, 100);
+        }
+
+        function extractUrl(element, baseUrl) {
+            const linkElement = element.tagName === 'A' ? element : element.querySelector('a');
+            if (linkElement && linkElement.href) {
+                let url = linkElement.href;
+                if (!url.startsWith('http')) {
+                    try {
+                        url = new URL(url, baseUrl).href;
+                    } catch (e) {
+                        url = baseUrl;
+                    }
+                }
+                return url;
+            }
+            return baseUrl;
+        }
+
+        function displayResults(results, dayRange, showConfidence) {
             const resultsDiv = document.getElementById('results');
             
             if (results.length === 0) {
@@ -1000,16 +1227,15 @@
                         <p><strong>検索期間:</strong> ${dateRange}（過去${dayRange}日間）</p>
                         <p><strong>監視キーワード:</strong> ${keywords.join('、')}</p>
                         <p><strong>監視サイト:</strong> ${sites.map(site => site.name).join('、')}</p>
-                        <p>指定された期間内に建築設備関連のキーワードを含む記事は見つかりませんでした。</p>
+                        <p>指定された期間内に該当するキーワードを含む記事は見つかりませんでした。</p>
                     </div>
                 `;
-                showStatus('該当する建築設備案件が見つかりませんでした', 'warning');
-                debugLog('結果表示: 該当なし');
+                showStatus('該当する案件が見つかりませんでした', 'warning');
                 return;
             }
 
-            // 結果を日付順でソート（新しい順）
-            results.sort((a, b) => new Date(b.date) - new Date(a.date));
+            // 結果を日付順でソート
+            results.sort((a, b) => new Date(b.dateInfo.date) - new Date(a.dateInfo.date));
 
             const cutoffDate = new Date(Date.now() - dayRange * 24 * 60 * 60 * 1000);
             const dateRange = `${cutoffDate.toLocaleDateString('ja-JP')} ～ ${new Date().toLocaleDateString('ja-JP')}`;
@@ -1021,20 +1247,20 @@
                 </p>
             `;
             
-            results.forEach((result, index) => {
-                const publishedDate = new Date(result.date);
+            results.forEach(result => {
+                const publishedDate = new Date(result.dateInfo.date);
                 const today = new Date();
                 const diffTime = Math.abs(today - publishedDate);
                 const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
                 
-                let dateDisplay = publishedDate.toLocaleDateString('ja-JP', {
+                const dateDisplay = publishedDate.toLocaleDateString('ja-JP', {
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit',
                     weekday: 'short'
                 });
                 
-                // 新着表示の判定
+                // 新着ラベル
                 let newLabel = '';
                 if (diffDays === 0) {
                     newLabel = '<span style="background: #ff4444; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.8rem; margin-left: 8px;">本日</span>';
@@ -1044,129 +1270,101 @@
                     newLabel = '<span style="background: #4CAF50; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.8rem; margin-left: 8px;">新着</span>';
                 }
                 
-                const keywordList = Array.isArray(result.keywords) ? result.keywords.join(', ') : '不明';
+                // 信頼度バッジ
+                let confidenceBadge = '';
+                if (showConfidence) {
+                    const confidenceText = {
+                        'high': '高',
+                        'medium': '中',
+                        'low': '低',
+                        'unknown': '不明'
+                    }[result.dateInfo.confidence];
+                    
+                    confidenceBadge = `<span class="confidence-badge confidence-${result.dateInfo.confidence}" title="${result.dateInfo.source}">信頼度: ${confidenceText}</span>`;
+                }
+                
+                const keywordList = result.keywords.join(', ');
+                const itemClass = result.dateInfo.confidence === 'low' || result.dateInfo.confidence === 'unknown' ? 'result-item low-confidence' : 'result-item';
                 
                 resultsHTML += `
-                    <div class="result-item">
+                    <div class="${itemClass}">
                         <div>
                             <a href="${result.url}" class="result-url" target="_blank" rel="noopener noreferrer">${result.url}</a>
                         </div>
-                        <div style="margin-top: 8px; font-weight: 600; color: #333; display: flex; align-items: center;">
-                            ${result.title}${newLabel}
+                        <div style="margin-top: 8px; font-weight: 600; color: #333; display: flex; align-items: center; flex-wrap: wrap;">
+                            ${result.title}${newLabel}${confidenceBadge}
                         </div>
                         ${result.content ? `<div style="margin-top: 5px; color: #555; font-size: 0.9rem;">${result.content.substring(0, 200)}${result.content.length > 200 ? '...' : ''}</div>` : ''}
                         <div class="result-keywords">
                             ${dateDisplay} | サイト: ${result.siteName} | 該当キーワード: ${keywordList}
+                            ${showConfidence ? ` | 抽出ソース: ${result.dateInfo.source}` : ''}
                         </div>
                     </div>
                 `;
             });
 
-            // CSVエクスポート機能
-            resultsHTML += `
-                <div style="margin-top: 20px; text-align: center;">
-                    <button class="btn btn-primary" onclick="exportToCSV(${JSON.stringify(results).replace(/"/g, '&quot;')})">
-                        CSVでエクスポート
-                    </button>
-                </div>
-            `;
-
             resultsDiv.innerHTML = resultsHTML;
-            showStatus(`${results.length}件の建築設備案件を発見しました`, 'success');
-            debugLog(`結果表示完了: ${results.length}件`);
+            showStatus(`${results.length}件の案件を発見しました`, 'success');
+            debugLog(`📊 結果表示完了: ${results.length}件`);
         }
 
-        // CSVエクスポート機能
-        function exportToCSV(results) {
-            const csvHeader = 'URL,タイトル,サイト名,発見日時,該当キーワード,内容\n';
-            const csvRows = results.map(result => {
-                const formattedDate = new Date(result.date).toLocaleDateString('ja-JP') + ' ' + new Date(result.date).toLocaleTimeString('ja-JP');
-                const keywords = Array.isArray(result.keywords) ? result.keywords.join(';') : '';
-                const content = (result.content || '').replace(/"/g, '""').replace(/\r?\n/g, ' ');
-                
-                return `"${result.url}","${result.title}","${result.siteName}","${formattedDate}","${keywords}","${content}"`;
-            }).join('\n');
-
-            const csvContent = csvHeader + csvRows;
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            
-            if (link.download !== undefined) {
-                const url = URL.createObjectURL(blob);
-                link.setAttribute('href', url);
-                link.setAttribute('download', `建築設備入札情報_${new Date().toISOString().split('T')[0]}.csv`);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                showStatus('CSVファイルをダウンロードしました', 'success');
-                debugLog('CSVエクスポート完了');
-            } else {
-                showStatus('CSVエクスポートはこのブラウザではサポートされていません', 'error');
-                debugLog('CSVエクスポート失敗: 未対応ブラウザ');
-            }
-        }
-
-        // テスト用の模擬データ生成
-        function generateMockData(dayRange) {
-            debugLog('建築設備関連の模擬データを生成中...');
-            const mockResults = [];
+        function generateTestData(dayRange, showConfidence) {
+            debugLog('🧪 テストデータ生成中...');
+            const testResults = [];
             const today = new Date();
             
-            const mockTitles = [
-                '市役所本庁舎 外壁改修工事の入札公告について',
-                '小学校 屋上防水工事 一般競争入札',
-                '公民館 内装改装工事 オープンカウンタ方式',
-                '病院 空調設備修繕工事 入札案件',
-                '図書館 トイレ改修工事の公告'
+            const testData = [
+                {
+                    title: '市役所本庁舎 外壁改修工事の入札公告について',
+                    keywords: ['入札', '改修', '工事'],
+                    confidence: 'high',
+                    source: 'JSON-LD:datePublished',
+                    daysAgo: 2
+                },
+                {
+                    title: '小学校 屋上防水工事 一般競争入札',
+                    keywords: ['競争', '防水', '屋上'],
+                    confidence: 'medium',
+                    source: 'HTML:.date',
+                    daysAgo: 5
+                },
+                {
+                    title: '公民館 内装改装工事 オープンカウンタ方式',
+                    keywords: ['オープンカウンタ', '内装', '改装'],
+                    confidence: 'high',
+                    source: 'メタ:article:published_time',
+                    daysAgo: 1
+                }
             ];
             
-            const mockKeywords = [
-                ['入札', '改修', '工事'],
-                ['競争', '防水', '屋上'],
-                ['オープンカウンタ', '内装', '改装'],
-                ['修繕', '空調', '設備'],
-                ['公告', 'トイレ']
-            ];
-            
-            for (let i = 0; i < 5; i++) {
-                const daysAgo = Math.floor(Math.random() * dayRange);
-                const mockDate = new Date(today.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+            testData.forEach((item, i) => {
+                const testDate = new Date(today.getTime() - item.daysAgo * 24 * 60 * 60 * 1000);
                 
-                mockResults.push({
+                testResults.push({
                     url: `https://example-city.gov.jp/tender/${i + 1}`,
-                    title: mockTitles[i],
-                    keywords: mockKeywords[i],
-                    date: mockDate,
+                    title: item.title,
+                    keywords: item.keywords,
+                    dateInfo: {
+                        date: testDate,
+                        confidence: item.confidence,
+                        source: item.source
+                    },
                     siteName: 'テスト自治体サイト',
-                    content: 'これは建築設備関連のテスト用模擬データです。実際の入札情報ではありません。',
+                    content: 'これは高精度日付抽出機能のテスト用模擬データです。',
                     isNew: true
                 });
-            }
+            });
             
-            debugLog(`模擬データ生成完了: ${mockResults.length}件`);
-            return mockResults;
-        }
-
-        // テスト機能
-        function runTest() {
-            debugLog('建築設備テストモード開始');
-            showStatus('テスト実行中...', 'warning');
-            
-            const testResults = generateMockData(7);
-            displayResults(testResults, 7);
-            
-            showStatus('テスト完了（建築設備関連の模擬データを表示）', 'success');
+            debugLog(`✅ テストデータ生成完了: ${testResults.length}件`);
+            return testResults;
         }
 
         // 初期化
         document.addEventListener('DOMContentLoaded', function() {
-            debugLog('建築設備入札スクレイピングシステム初期化開始');
+            debugLog('🚀 高精度日付抽出システム初期化開始');
             
-            // 固定キーワードを表示
             initializeKeywords();
             
-            // イベントリスナー設定
             document.getElementById('siteInput').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') addSite();
             });
@@ -1175,19 +1373,8 @@
                 if (e.key === 'Enter') addSite();
             });
 
-            // テストボタンの追加
-            const testButton = `
-                <div style="margin-top: 10px; text-align: center;">
-                    <button class="btn btn-primary" onclick="runTest()" style="background: #ff9800;">
-                        テスト実行（建築設備模擬データ）
-                    </button>
-                </div>
-            `;
-            
-            document.querySelector('#statusMessage').insertAdjacentHTML('afterend', testButton);
-            
-            showStatus('v4.0 建築設備入札スクレイピングシステムが準備できました', 'success');
-            debugLog('初期化完了 - 建築設備特化システム準備OK');
+            showStatus('v5.0 高精度日付抽出システムが準備できました', 'success');
+            debugLog('✅ 初期化完了');
         });
     </script>
 </body>
