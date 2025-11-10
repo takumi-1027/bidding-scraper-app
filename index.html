@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>建築設備入札スクレイピングシステム v5.1 - リンク修正版</title>
+    <title>建築設備入札スクレイピングシステム v5.2 - 永続化対応版</title>
     <style>
         * {
             box-sizing: border-box;
@@ -207,6 +207,16 @@
             box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
         }
 
+        .btn-warning {
+            background: linear-gradient(45deg, #ff9800, #ffb74d);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.4);
+        }
+
         .btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
@@ -246,6 +256,25 @@
             color: #666;
             font-style: italic;
             font-size: 0.9rem;
+        }
+
+        .storage-info {
+            background: #e8f4fd;
+            border: 1px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .storage-info h5 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .storage-info p {
+            color: #0066cc;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
         }
 
         .keyword-info {
@@ -479,42 +508,48 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>建築設備入札スクレイピングシステム v5.1</h1>
-            <p>リンク修正版 - 正確なURL生成機能搭載</p>
+            <h1>建築設備入札スクレイピングシステム v5.2</h1>
+            <p>永続化対応版 - 監視サイトリストがブラウザを閉じても保持されます</p>
         </div>
 
         <div class="main-content">
             <!-- デバッグ情報セクション -->
             <div class="debug-section">
-                <h3>🔍 URL変換デバッグ情報</h3>
+                <h3>🔍 システム・データ永続化デバッグ情報</h3>
                 <div id="debugInfo" class="debug-info">システム起動中...</div>
             </div>
 
             <!-- 重要な注意事項 -->
             <div class="warning" id="warningSection">
                 <div class="warning-header" onclick="toggleWarning()">
-                    <h4>⚠️ v5.1 リンク修正版の改善点</h4>
+                    <h4>⚠️ v5.2 永続化対応版の新機能</h4>
                     <span class="warning-toggle">▼</span>
                 </div>
                 <div class="warning-content" id="warningContent">
                     <ul>
-                        <li><strong>リンク切れ問題解決:</strong> Netlifyドメインが混入する問題を根本解決</li>
-                        <li><strong>正確なURL変換:</strong> 相対パスを元サイトのドメインで正しく絶対URL化</li>
-                        <li><strong>デバッグ機能強化:</strong> URL変換過程を詳細表示</li>
-                        <li><strong>船橋市サイト対応:</strong> 具体的な問題サイトでの動作を最適化</li>
-                        <li><strong>高精度日付抽出:</strong> 既存の日付抽出機能は維持</li>
+                        <li><strong>自動保存機能:</strong> サイト追加・削除時に自動的にブラウザに保存</li>
+                        <li><strong>自動復元機能:</strong> ページ読み込み時に保存されたサイト情報を自動復元</li>
+                        <li><strong>データ管理機能:</strong> ローカルストレージによる確実なデータ保持</li>
+                        <li><strong>エラーハンドリング:</strong> 保存・読み込み失敗時の適切な処理</li>
+                        <li><strong>既存機能完全保持:</strong> リンク修正・高精度日付抽出機能も維持</li>
                     </ul>
                 </div>
             </div>
 
             <!-- サイト管理セクション -->
             <div class="section">
-                <h2>監視サイト管理</h2>
+                <h2>監視サイト管理（永続化対応）</h2>
                 <div class="input-group">
                     <input type="url" id="siteInput" placeholder="監視するサイトのURLを入力" />
                     <input type="text" id="siteNameInput" placeholder="サイト名（任意）" />
                     <button class="btn btn-primary" onclick="addSite()">サイト追加</button>
                 </div>
+                
+                <div class="storage-info" id="storageInfo">
+                    <h5>💾 データ永続化状況</h5>
+                    <p id="storageStatus">読み込み中...</p>
+                </div>
+
                 <div id="siteList"></div>
             </div>
 
@@ -561,7 +596,7 @@
                     </label>
                 </div>
                 <button class="btn btn-success" id="scrapeBtn" onclick="startScraping()">
-                    リンク修正版スクレイピング開始
+                    永続化対応版スクレイピング開始
                 </button>
                 <div id="statusMessage"></div>
             </div>
@@ -589,6 +624,84 @@
         // グローバル変数
         let sites = [];
         let keywords = [...FIXED_KEYWORDS];
+
+        // ★★★ 永続化機能 ★★★
+        const STORAGE_KEY = 'scraping_system_sites_v52';
+
+        // データ保存機能
+        function saveSitesToStorage() {
+            try {
+                const dataToSave = {
+                    version: '5.2',
+                    timestamp: new Date().toISOString(),
+                    sites: sites
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+                debugLog(`💾 サイトデータ保存完了: ${sites.length}件`);
+                updateStorageInfo();
+                return true;
+            } catch (error) {
+                debugLog(`❌ 保存エラー: ${error.message}`);
+                showStatus('データ保存に失敗しました', 'error');
+                return false;
+            }
+        }
+
+        // データ読み込み機能
+        function loadSitesFromStorage() {
+            try {
+                const storedData = localStorage.getItem(STORAGE_KEY);
+                if (!storedData) {
+                    debugLog('📁 保存データなし（初回起動）');
+                    return [];
+                }
+
+                const parsedData = JSON.parse(storedData);
+                
+                // データ形式の検証
+                if (parsedData.sites && Array.isArray(parsedData.sites)) {
+                    debugLog(`📂 サイトデータ復元: ${parsedData.sites.length}件 (保存日時: ${parsedData.timestamp})`);
+                    return parsedData.sites;
+                } else {
+                    debugLog('❌ 無効なデータ形式');
+                    return [];
+                }
+            } catch (error) {
+                debugLog(`❌ 読み込みエラー: ${error.message}`);
+                showStatus('データ読み込みに失敗しました', 'error');
+                return [];
+            }
+        }
+
+        // ストレージ情報更新
+        function updateStorageInfo() {
+            const statusElement = document.getElementById('storageStatus');
+            if (!statusElement) return;
+
+            try {
+                const storedData = localStorage.getItem(STORAGE_KEY);
+                if (storedData) {
+                    const data = JSON.parse(storedData);
+                    const saveDate = new Date(data.timestamp).toLocaleString('ja-JP');
+                    statusElement.innerHTML = `
+                        保存サイト数: ${sites.length}件 | 
+                        最終保存: ${saveDate} | 
+                        データサイズ: ${(storedData.length / 1024).toFixed(1)} KB
+                    `;
+                } else {
+                    statusElement.innerHTML = '未保存（サイトを追加すると自動保存されます）';
+                }
+            } catch (error) {
+                statusElement.innerHTML = '保存状況の取得に失敗';
+            }
+        }
+
+        // サイトリスト表示更新
+        function refreshSiteList() {
+            const siteList = document.getElementById('siteList');
+            siteList.innerHTML = '';
+            sites.forEach(site => addSiteToList(site));
+        }
 
         // 日付ユーティリティ関数
         function toHalfWidth(str) {
@@ -622,8 +735,6 @@
 
         // 高精度日付抽出システム
         function extractDateWithHighPrecision(element, doc, baseDate = new Date()) {
-            debugLog(`🔍 高精度日付抽出開始: ${element.textContent?.substring(0, 50) || 'N/A'}...`);
-            
             const candidates = [];
             
             // 1. JSON-LD構造化データ（最高精度）
@@ -659,7 +770,7 @@
                     extractFromJson(data);
                 }
             } catch (e) {
-                debugLog(`JSON-LD解析エラー: ${e.message}`);
+                // JSON-LD解析エラーは無視
             }
 
             // 2. メタデータ（高精度）
@@ -736,7 +847,6 @@
 
             // 候補から最適なものを選択
             if (candidates.length === 0) {
-                debugLog('❌ 日付候補が見つかりませんでした');
                 return null;
             }
 
@@ -750,7 +860,6 @@
             );
 
             if (validCandidates.length === 0) {
-                debugLog('❌ 有効な日付候補がありませんでした');
                 return null;
             }
 
@@ -762,7 +871,7 @@
             });
 
             const best = validCandidates[0];
-            debugLog(`✅ 最適な日付を選択: ${best.date.toISOString()} (信頼度: ${best.confidence}, ソース: ${best.source})`);
+            debugLog(`✅ 日付抽出成功: ${best.date.toISOString()} (信頼度: ${best.confidence})`);
             
             return best;
         }
@@ -865,9 +974,8 @@
                 
                 const testDate = makeJSTDate(year, month, day);
                 if (testDate && testDate > baseDate) {
-                    // 未来日付の場合は前年を試す
                     const timeDiff = testDate.getTime() - baseDate.getTime();
-                    if (timeDiff > 30 * 24 * 60 * 60 * 1000) { // 30日以上未来
+                    if (timeDiff > 30 * 24 * 60 * 60 * 1000) {
                         year--;
                     }
                 }
@@ -930,6 +1038,7 @@
             debugLog(`固定キーワード ${FIXED_KEYWORDS.length} 個を設定完了`);
         }
 
+        // ★修正: サイト追加時に自動保存
         function addSite() {
             const urlInput = document.getElementById('siteInput');
             const nameInput = document.getElementById('siteNameInput');
@@ -954,12 +1063,19 @@
             }
 
             const siteName = customName || new URL(url).hostname;
-            const newSite = { url, name: siteName };
+            const newSite = { 
+                url, 
+                name: siteName,
+                addedDate: new Date().toISOString()
+            };
+            
             sites.push(newSite);
             addSiteToList(newSite);
+            saveSitesToStorage(); // ★自動保存
+            
             urlInput.value = '';
             nameInput.value = '';
-            showStatus('サイトを追加しました', 'success');
+            showStatus('サイトを追加し、自動保存しました', 'success');
             debugLog(`サイト追加: ${url} (${siteName})`);
         }
 
@@ -977,12 +1093,14 @@
             siteList.appendChild(div);
         }
 
+        // ★修正: サイト削除時に自動保存
         function removeSite(button) {
             const listItem = button.parentElement;
             const url = listItem.querySelector('.site-url').textContent;
             sites = sites.filter(site => site.url !== url);
             listItem.remove();
-            showStatus('サイトを削除しました', 'success');
+            saveSitesToStorage(); // ★自動保存
+            showStatus('サイトを削除し、自動保存しました', 'success');
             debugLog(`サイト削除: ${url}`);
         }
 
@@ -1001,7 +1119,7 @@
             const showConfidence = document.getElementById('showConfidence').checked;
             const showUrlDebug = document.getElementById('showUrlDebug').checked;
             
-            debugLog('🚀 リンク修正版スクレイピング開始');
+            debugLog('🚀 永続化対応版スクレイピング開始');
             debugLog(`設定 - 期間: ${dayRange}日, 日付不明含む: ${includeUndated}, 信頼度表示: ${showConfidence}`);
             
             if (sites.length === 0) {
@@ -1013,7 +1131,7 @@
             resultsDiv.innerHTML = `
                 <div class="loading">
                     <div class="spinner"></div>
-                    <p>リンク修正版でスクレイピング中...</p>
+                    <p>永続化対応版でスクレイピング中...</p>
                 </div>
             `;
 
@@ -1090,7 +1208,7 @@
                                 debugLog(`🔍 "${selector}" で ${elements.length} 個の要素を発見`);
                                 
                                 elements.forEach((element, index) => {
-                                    if (index > 30) return; // 処理数制限
+                                    if (index > 30) return;
                                     
                                     const elementText = element.innerText || element.textContent || '';
                                     const elementKeywords = matchKeywordsInText(elementText);
@@ -1106,8 +1224,6 @@
                                             if (date >= cutoffDate && date <= new Date()) {
                                                 shouldInclude = true;
                                                 dateInfo = { date, confidence, source };
-                                            } else {
-                                                debugLog(`📅 期間外のため除外: ${date.toISOString()}`);
                                             }
                                         } else if (includeUndated) {
                                             shouldInclude = true;
@@ -1116,14 +1232,11 @@
                                                 confidence: 'unknown',
                                                 source: '日付不明'
                                             };
-                                            debugLog('📅 日付不明だが設定により含める');
-                                        } else {
-                                            debugLog('📅 日付不明のため除外');
                                         }
                                         
                                         if (shouldInclude) {
                                             const title = extractTitle(element, elementText);
-                                            const url = extractUrl(element, site.url); // ★修正済み関数を使用
+                                            const url = extractUrl(element, site.url);
                                             
                                             const isDuplicate = results.some(r => 
                                                 r.url === url && r.title.trim() === title.trim()
@@ -1146,9 +1259,7 @@
                                                 }
                                                 
                                                 results.push(resultItem);
-                                                
-                                                debugLog(`✅ 結果追加: ${title?.substring(0, 50) || '無題'}... (信頼度: ${dateInfo.confidence})`);
-                                                debugLog(`   URL: ${url}`);
+                                                debugLog(`✅ 結果追加: ${title?.substring(0, 50) || '無題'}...`);
                                             }
                                         }
                                     }
@@ -1215,24 +1326,19 @@
             return text.substring(0, 100);
         }
 
-        // ★修正されたURL抽出関数（最重要）
         function extractUrl(element, siteUrl) {
             const linkElement = element.tagName === 'A' ? element : element.querySelector('a');
             
             if (linkElement) {
-                // getAttribute で生のhref値を取得（element.hrefは使わない）
                 const rawHref = linkElement.getAttribute('href');
                 
                 if (rawHref) {
                     try {
-                        // 元サイトのオリジン（ルートドメイン）を基準に絶対URL化
                         const origin = new URL(siteUrl).origin;
                         const resolvedUrl = new URL(rawHref, origin).href;
-                        
-                        debugLog(`🔗 URL変換: ${rawHref} → ${resolvedUrl}`);
                         return resolvedUrl;
                     } catch (e) {
-                        debugLog(`❌ URL解決エラー: ${e.message}, href: ${rawHref}`);
+                        debugLog(`❌ URL解決エラー: ${e.message}`);
                         return siteUrl;
                     }
                 }
@@ -1387,7 +1493,7 @@
                         source: item.source
                     },
                     siteName: 'テスト自治体サイト',
-                    content: 'これはリンク修正版のテスト用模擬データです。',
+                    content: 'これは永続化対応版のテスト用模擬データです。',
                     isNew: true
                 };
                 
@@ -1402,12 +1508,28 @@
             return testResults;
         }
 
-        // 初期化
+        // ★初期化処理に永続化機能を追加
         document.addEventListener('DOMContentLoaded', function() {
-            debugLog('🚀 リンク修正版システム初期化開始');
+            debugLog('🚀 永続化対応版システム初期化開始');
             
+            // キーワード表示初期化
             initializeKeywords();
             
+            // ★保存されたサイト情報を復元
+            const savedSites = loadSitesFromStorage();
+            if (savedSites.length > 0) {
+                sites = savedSites;
+                refreshSiteList();
+                debugLog(`💾 ${savedSites.length}件のサイト情報を復元しました`);
+                showStatus(`${savedSites.length}件のサイト情報を復元しました`, 'success');
+            } else {
+                debugLog('📁 保存されたサイト情報なし（初回起動）');
+            }
+            
+            // ストレージ情報を更新
+            updateStorageInfo();
+            
+            // イベントリスナー設定
             document.getElementById('siteInput').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') addSite();
             });
@@ -1416,8 +1538,8 @@
                 if (e.key === 'Enter') addSite();
             });
 
-            showStatus('v5.1 リンク修正版システムが準備できました', 'success');
-            debugLog('✅ 初期化完了 - URL抽出機能修正済み');
+            showStatus('v5.2 永続化対応版システムが準備できました', 'success');
+            debugLog('✅ 初期化完了 - 永続化機能有効');
         });
     </script>
 </body>
