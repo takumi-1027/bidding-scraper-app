@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>入札スクレイピングシステム v5.2 </title>
+    <title>建築設備入札スクレイピングシステム v5.3</title>
     <style>
         * {
             box-sizing: border-box;
@@ -508,8 +508,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>建築設備入札スクレイピングシステム v5.2</h1>
-            <p>永続化対応版 - 監視サイトリストがブラウザを閉じても保持されます</p>
+            <h1>建築設備入札スクレイピングシステム v5.3</h1>
+            <p>永続化対応版 - 本番運用仕様（テストデータ非表示）</p>
         </div>
 
         <div class="main-content">
@@ -522,16 +522,15 @@
             <!-- 重要な注意事項 -->
             <div class="warning" id="warningSection">
                 <div class="warning-header" onclick="toggleWarning()">
-                    <h4>⚠️ v5.2 永続化対応版の新機能</h4>
+                    <h4>⚠️ v5.3 本番運用仕様の変更点</h4>
                     <span class="warning-toggle">▼</span>
                 </div>
                 <div class="warning-content" id="warningContent">
                     <ul>
-                        <li><strong>自動保存機能:</strong> サイト追加・削除時に自動的にブラウザに保存</li>
-                        <li><strong>自動復元機能:</strong> ページ読み込み時に保存されたサイト情報を自動復元</li>
-                        <li><strong>データ管理機能:</strong> ローカルストレージによる確実なデータ保持</li>
-                        <li><strong>エラーハンドリング:</strong> 保存・読み込み失敗時の適切な処理</li>
-                        <li><strong>既存機能完全保持:</strong> リンク修正・高精度日付抽出機能も維持</li>
+                        <li><strong>テストデータ非表示:</strong> 該当案件がない場合にテストデータが表示されなくなりました</li>
+                        <li><strong>本番運用仕様:</strong> 実際の運用環境に適した動作に最適化</li>
+                        <li><strong>永続化機能維持:</strong> サイト情報の自動保存・復元機能は継続</li>
+                        <li><strong>全機能保持:</strong> 高精度日付抽出、リンク修正など既存機能はすべて維持</li>
                     </ul>
                 </div>
             </div>
@@ -596,7 +595,7 @@
                     </label>
                 </div>
                 <button class="btn btn-success" id="scrapeBtn" onclick="startScraping()">
-                    永続化対応版スクレイピング開始
+                    本番運用版スクレイピング開始
                 </button>
                 <div id="statusMessage"></div>
             </div>
@@ -625,14 +624,14 @@
         let sites = [];
         let keywords = [...FIXED_KEYWORDS];
 
-        // ★★★ 永続化機能 ★★★
-        const STORAGE_KEY = 'scraping_system_sites_v52';
+        // 永続化機能
+        const STORAGE_KEY = 'scraping_system_sites_v53';
 
         // データ保存機能
         function saveSitesToStorage() {
             try {
                 const dataToSave = {
-                    version: '5.2',
+                    version: '5.3',
                     timestamp: new Date().toISOString(),
                     sites: sites
                 };
@@ -658,7 +657,6 @@
 
                 const parsedData = JSON.parse(storedData);
                 
-                // データ形式の検証
                 if (parsedData.sites && Array.isArray(parsedData.sites)) {
                     debugLog(`📂 サイトデータ復元: ${parsedData.sites.length}件 (保存日時: ${parsedData.timestamp})`);
                     return parsedData.sites;
@@ -737,7 +735,6 @@
         function extractDateWithHighPrecision(element, doc, baseDate = new Date()) {
             const candidates = [];
             
-            // 1. JSON-LD構造化データ（最高精度）
             try {
                 const jsonScripts = doc.querySelectorAll('script[type="application/ld+json"]');
                 for (const script of jsonScripts) {
@@ -773,7 +770,6 @@
                 // JSON-LD解析エラーは無視
             }
 
-            // 2. メタデータ（高精度）
             const metaSelectors = [
                 'meta[property="article:published_time"]',
                 'meta[property="article:modified_time"]',
@@ -797,7 +793,6 @@
                 }
             }
 
-            // 3. HTML構造化要素（中精度）
             const dateSelectors = [
                 'time[datetime]',
                 '.date', '.datetime', '.published', '.post-date',
@@ -834,7 +829,6 @@
                 });
             }
 
-            // 4. テキストパターンマッチング（低精度）
             const elementText = element.textContent || element.innerText || '';
             const textDate = parseAdvancedDate(elementText, baseDate);
             if (textDate) {
@@ -845,12 +839,10 @@
                 });
             }
 
-            // 候補から最適なものを選択
             if (candidates.length === 0) {
                 return null;
             }
 
-            // 有効性チェック
             const now = new Date();
             const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
             const oneWeekFuture = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -863,7 +855,6 @@
                 return null;
             }
 
-            // 信頼度順でソート
             const confidenceOrder = { 'high': 3, 'medium': 2, 'low': 1 };
             validCandidates.sort((a, b) => {
                 const confDiff = confidenceOrder[b.confidence] - confidenceOrder[a.confidence];
@@ -882,7 +873,6 @@
             
             const normalized = toHalfWidth(dateStr.trim());
             
-            // 相対日付処理
             if (/本日|今日/.test(normalized)) {
                 return makeJSTDate(baseDate.getFullYear(), baseDate.getMonth() + 1, baseDate.getDate());
             }
@@ -902,7 +892,6 @@
                 return makeJSTDate(targetDate.getFullYear(), targetDate.getMonth() + 1, targetDate.getDate());
             }
 
-            // ISO形式
             const isoMatch = normalized.match(/(\d{4})-(\d{1,2})-(\d{1,2})(?:T(\d{1,2}):(\d{1,2}):(\d{1,2}))?/);
             if (isoMatch) {
                 return makeJSTDate(
@@ -915,7 +904,6 @@
                 );
             }
 
-            // 日本語表記: YYYY年MM月DD日
             const jpMatch = normalized.match(/(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
             if (jpMatch) {
                 return makeJSTDate(
@@ -925,7 +913,6 @@
                 );
             }
 
-            // 和暦: 令和X年MM月DD日
             const eraMatch = normalized.match(/(令和|平成|昭和|大正)\s*(元|\d+)\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
             if (eraMatch) {
                 const westernYear = eraToWesternYear(eraMatch[1], eraMatch[2]);
@@ -938,7 +925,6 @@
                 }
             }
 
-            // 和暦略記: R6.1.5
             const eraShortMatch = normalized.match(/([RrHhSs])(\d+)\.(\d{1,2})\.(\d{1,2})/);
             if (eraShortMatch) {
                 const eraMap = { 'R': '令和', 'r': '令和', 'H': '平成', 'h': '平成', 'S': '昭和', 's': '昭和' };
@@ -955,7 +941,6 @@
                 }
             }
 
-            // スラッシュ/ハイフン区切り: YYYY/MM/DD
             const slashMatch = normalized.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
             if (slashMatch) {
                 return makeJSTDate(
@@ -965,7 +950,6 @@
                 );
             }
 
-            // 月日のみ: MM月DD日（年は現在年で推定）
             const monthDayMatch = normalized.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
             if (monthDayMatch) {
                 let year = baseDate.getFullYear();
@@ -1038,7 +1022,6 @@
             debugLog(`固定キーワード ${FIXED_KEYWORDS.length} 個を設定完了`);
         }
 
-        // ★修正: サイト追加時に自動保存
         function addSite() {
             const urlInput = document.getElementById('siteInput');
             const nameInput = document.getElementById('siteNameInput');
@@ -1071,7 +1054,7 @@
             
             sites.push(newSite);
             addSiteToList(newSite);
-            saveSitesToStorage(); // ★自動保存
+            saveSitesToStorage();
             
             urlInput.value = '';
             nameInput.value = '';
@@ -1093,13 +1076,12 @@
             siteList.appendChild(div);
         }
 
-        // ★修正: サイト削除時に自動保存
         function removeSite(button) {
             const listItem = button.parentElement;
             const url = listItem.querySelector('.site-url').textContent;
             sites = sites.filter(site => site.url !== url);
             listItem.remove();
-            saveSitesToStorage(); // ★自動保存
+            saveSitesToStorage();
             showStatus('サイトを削除し、自動保存しました', 'success');
             debugLog(`サイト削除: ${url}`);
         }
@@ -1110,7 +1092,7 @@
             setTimeout(() => statusDiv.innerHTML = '', 5000);
         }
 
-        // メインスクレイピング関数
+        // ★修正: テストデータ表示機能を削除したメインスクレイピング関数
         async function startScraping() {
             const resultsDiv = document.getElementById('results');
             const scrapeBtn = document.getElementById('scrapeBtn');
@@ -1119,7 +1101,7 @@
             const showConfidence = document.getElementById('showConfidence').checked;
             const showUrlDebug = document.getElementById('showUrlDebug').checked;
             
-            debugLog('🚀 永続化対応版スクレイピング開始');
+            debugLog('🚀 本番運用版スクレイピング開始');
             debugLog(`設定 - 期間: ${dayRange}日, 日付不明含む: ${includeUndated}, 信頼度表示: ${showConfidence}`);
             
             if (sites.length === 0) {
@@ -1131,18 +1113,16 @@
             resultsDiv.innerHTML = `
                 <div class="loading">
                     <div class="spinner"></div>
-                    <p>永続化対応版でスクレイピング中...</p>
+                    <p>本番運用版でスクレイピング中...</p>
                 </div>
             `;
 
             try {
                 const results = await performHighPrecisionScraping(dayRange, includeUndated, showUrlDebug);
-                displayResults(results, dayRange, showConfidence, showUrlDebug);
                 
-                if (results.length === 0 && confirm('結果が見つかりませんでした。テストデータを表示しますか？')) {
-                    const testResults = generateTestData(dayRange, showConfidence, showUrlDebug);
-                    displayResults(testResults, dayRange, showConfidence, showUrlDebug);
-                }
+                // ★修正: テストデータ表示の確認ダイアログを完全に削除
+                // 結果が0件でも「該当案件なし」のメッセージのみ表示
+                displayResults(results, dayRange, showConfidence, showUrlDebug);
                 
             } catch (error) {
                 console.error('スクレイピングエラー:', error);
@@ -1367,7 +1347,6 @@
                 return;
             }
 
-            // 結果を日付順でソート
             results.sort((a, b) => new Date(b.dateInfo.date) - new Date(a.dateInfo.date));
 
             const cutoffDate = new Date(Date.now() - dayRange * 24 * 60 * 60 * 1000);
@@ -1393,7 +1372,6 @@
                     weekday: 'short'
                 });
                 
-                // 新着ラベル
                 let newLabel = '';
                 if (diffDays === 0) {
                     newLabel = '<span style="background: #ff4444; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.8rem; margin-left: 8px;">本日</span>';
@@ -1403,7 +1381,6 @@
                     newLabel = '<span style="background: #4CAF50; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.8rem; margin-left: 8px;">新着</span>';
                 }
                 
-                // 信頼度バッジ
                 let confidenceBadge = '';
                 if (showConfidence) {
                     const confidenceText = {
@@ -1416,7 +1393,6 @@
                     confidenceBadge = `<span class="confidence-badge confidence-${result.dateInfo.confidence}" title="${result.dateInfo.source}">信頼度: ${confidenceText}</span>`;
                 }
                 
-                // URL デバッグ情報
                 let urlDebugInfo = '';
                 if (showUrlDebug && result.urlDebugInfo) {
                     urlDebugInfo = `<div class="url-debug">🔗 ${result.urlDebugInfo}</div>`;
@@ -1448,74 +1424,12 @@
             debugLog(`📊 結果表示完了: ${results.length}件`);
         }
 
-        function generateTestData(dayRange, showConfidence, showUrlDebug) {
-            debugLog('🧪 テストデータ生成中...');
-            const testResults = [];
-            const today = new Date();
-            
-            const testData = [
-                {
-                    title: '船橋市 ペットボトル売払単価契約に係る指名競争入札結果',
-                    keywords: ['競争', '入札'],
-                    confidence: 'high',
-                    source: 'JSON-LD:datePublished',
-                    daysAgo: 2,
-                    url: 'https://www.city.funabashi.lg.jp/jigyou/nyusatsu/002/p140434.html'
-                },
-                {
-                    title: '小学校 屋上防水工事 一般競争入札',
-                    keywords: ['競争', '防水', '屋上'],
-                    confidence: 'medium',
-                    source: 'HTML:.date',
-                    daysAgo: 5,
-                    url: 'https://example-city.gov.jp/tender/waterproof-2024-001.html'
-                },
-                {
-                    title: '公民館 内装改装工事 オープンカウンタ方式',
-                    keywords: ['オープンカウンタ', '内装', '改装'],
-                    confidence: 'high',
-                    source: 'メタ:article:published_time',
-                    daysAgo: 1,
-                    url: 'https://example-city.gov.jp/tender/interior-renovation-2024.html'
-                }
-            ];
-            
-            testData.forEach((item, i) => {
-                const testDate = new Date(today.getTime() - item.daysAgo * 24 * 60 * 60 * 1000);
-                
-                const resultItem = {
-                    url: item.url,
-                    title: item.title,
-                    keywords: item.keywords,
-                    dateInfo: {
-                        date: testDate,
-                        confidence: item.confidence,
-                        source: item.source
-                    },
-                    siteName: 'テスト自治体サイト',
-                    content: 'これは永続化対応版のテスト用模擬データです。',
-                    isNew: true
-                };
-                
-                if (showUrlDebug) {
-                    resultItem.urlDebugInfo = `テストデータ: 正しいURL生成確認済み`;
-                }
-                
-                testResults.push(resultItem);
-            });
-            
-            debugLog(`✅ テストデータ生成完了: ${testResults.length}件`);
-            return testResults;
-        }
-
-        // ★初期化処理に永続化機能を追加
+        // 初期化処理
         document.addEventListener('DOMContentLoaded', function() {
-            debugLog('🚀 永続化対応版システム初期化開始');
+            debugLog('🚀 本番運用版システム初期化開始');
             
-            // キーワード表示初期化
             initializeKeywords();
             
-            // ★保存されたサイト情報を復元
             const savedSites = loadSitesFromStorage();
             if (savedSites.length > 0) {
                 sites = savedSites;
@@ -1526,10 +1440,8 @@
                 debugLog('📁 保存されたサイト情報なし（初回起動）');
             }
             
-            // ストレージ情報を更新
             updateStorageInfo();
             
-            // イベントリスナー設定
             document.getElementById('siteInput').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') addSite();
             });
@@ -1538,8 +1450,8 @@
                 if (e.key === 'Enter') addSite();
             });
 
-            showStatus('v5.2 永続化対応版システムが準備できました', 'success');
-            debugLog('✅ 初期化完了 - 永続化機能有効');
+            showStatus('v5.3 本番運用版システムが準備できました', 'success');
+            debugLog('✅ 初期化完了 - テストデータ自動表示機能停止');
         });
     </script>
 </body>
